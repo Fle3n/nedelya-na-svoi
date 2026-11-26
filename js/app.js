@@ -1,5 +1,5 @@
 // Интерфейс «Недели на свои». Вся логика игры — в engine.js, здесь только экраны и кнопки.
-// Оформление: ценник и кассовый чек (css/style.css). Эмодзи — только как картинки еды.
+// Оформление: ценник и кассовый чек (css/style.css), стикеры продуктов и блюд — js/stickers.js.
 (function (N) {
   'use strict';
   const G = N.engine;
@@ -320,7 +320,11 @@
     if (left > 60) return '';
     return `<span class="st">ещё ${left + 1} ${dayWord(left + 1)}</span>`;
   }
-  const pic = (emoji) => `<span class="pic" aria-hidden="true">${emoji}</span>`;
+  // Картинка продукта или блюда: свой стикер (js/stickers.js), а если его нет — эмодзи
+  const pic = (item) => {
+    const stk = N.stickers ? N.stickers.pic(item) : '';
+    return stk ? `<span class="pic has-stk" aria-hidden="true">${stk}</span>` : `<span class="pic" aria-hidden="true">${(item && item.emoji) || ''}</span>`;
+  };
 
   function screenDay() {
     const s = game;
@@ -330,8 +334,8 @@
       const m = d.meals[sl.id];
       if (m) {
         return `<div class="meal"><span class="time">${SLOT_TIME[sl.id] || ''}</span>
-          <div><div class="slot">${sl.name}</div><div class="name">${esc(m.name)}</div><div class="nut">${nutLine(m)}</div></div>
-          <span class="done" role="img" aria-label="съедено">${icon('check')}</span></div>`;
+          <div><div class="slot">${sl.name} <span class="done" role="img" aria-label="съедено">${icon('check')}</span></div><div class="name">${esc(m.name)}</div><div class="nut">${nutLine(m)}</div></div>
+          ${pic(m)}</div>`;
       }
       return `<div class="meal empty"><span class="time">${SLOT_TIME[sl.id] || ''}</span>
         <div><div class="slot">${sl.name}</div><div class="name">ещё не было</div></div>
@@ -339,17 +343,17 @@
     }).join('');
     const extras = [...d.snacks, ...d.extra];
     const extrasHtml = extras.length
-      ? `<div class="extras">${extras.map((e) => `<div class="rowi">${pic(e.emoji)}<div class="body"><div class="name">${esc(e.name)}</div><div class="nut">${nutLine(e)}</div></div></div>`).join('')}</div>`
+      ? `<div class="extras">${extras.map((e) => `<div class="rowi">${pic(e)}<div class="body"><div class="name">${esc(e.name)}</div><div class="nut">${nutLine(e)}</div></div></div>`).join('')}</div>`
       : '';
     const dishes = s.dishes.map((x) => `
-      <div class="rowi">${pic(x.emoji)}
+      <div class="rowi">${pic(x)}
         <div class="body"><div class="name">${esc(x.name)}</div>
           <div class="sub">${x.portions} ${portionWord(x.portions)} · ${Math.round(x.kcal)} ккал, белок ${Math.round(x.prot)} г в порции</div></div>
         ${expiryBadge(x.exp, false)}</div>`).join('');
     const pantry = G.pantryView(s).map((x) => {
       const p = P[x.pid];
       const freezeBtn = p.freeze && !x.frozen ? `<button class="btn small icon-btn" data-act="freeze" data-pid="${x.pid}" aria-label="Заморозить: ${esc(p.name)}" title="Заморозить">${icon('snow')}</button>` : '';
-      return `<div class="rowi">${pic(p.emoji)}
+      return `<div class="rowi">${pic(p)}
         <div class="body"><div class="name">${esc(p.name)}</div><div class="sub mono">${G.fmtAmount(x.pid, x.g)}</div></div>
         ${expiryBadge(x.exp, x.frozen)}${freezeBtn}</div>`;
     }).join('');
@@ -381,7 +385,7 @@
     const s = game;
     const promos = (s.plan.promos[s.day] || []).map((pr) => {
       const p = P[pr.pid];
-      return `<button class="promo" data-act="cat" data-cat="${p.cat}">
+      return `<button class="promo" data-act="cat" data-cat="${p.cat}">${pic(p)}
         <span class="pct">−${pr.pct}%</span><span class="nm">${esc(p.name)}</span>
         <span class="pr">${rub(G.packPrice(s, pr.pid).price)} вместо ${rub(G.basePackPrice(s, pr.pid))}</span></button>`;
     }).join('');
@@ -395,7 +399,7 @@
       const have = G.stock(s, p.id);
       const keep = p.frozen ? 'заморозка' : p.shelf > 60 ? 'хранится долго' : `хранится ${p.shelf} ${dayWord(p.shelf)}`;
       return `<div class="product">
-        ${pic(p.emoji)}
+        ${pic(p)}
         <div class="info"><div class="name">${esc(p.name)}</div><div class="facts">${G.fmtPack(p.id)} · ${keep}</div></div>
         <div class="ptag ${pp.pct ? 'sale' : ''}">${pp.pct ? `<span class="off">−${pp.pct}%</span><s>${rub(pp.base)}</s>` : ''}<span class="p">${G.fmtNum(pp.price)}<small>₽</small></span><span class="u">${unit}</span></div>
         <div class="meta">${prot10}${have ? `<span class="st ok">дома ${G.fmtAmount(p.id, have)}</span>` : ''}</div>
@@ -433,7 +437,7 @@
     }).join('');
     const max = G.maxPortions(s, r.id);
     return `<article class="card recipe">
-      <div class="head">${pic(r.emoji)}<div><h3>${esc(r.name)}</h3>
+      <div class="head">${pic(r)}<div><h3>${esc(r.name)}</h3>
         <div class="nut"><span>${r.time} мин</span><span>хранится ${r.keep} ${dayWord(r.keep)}</span>${r.cold ? '<span>без плиты</span>' : ''}</div></div></div>
       <ul class="ings" aria-label="Продукты на порцию">${ing}</ul>
       <div class="nut" style="margin-bottom:0.6rem">На порцию: ${nutLine(n)}</div>
@@ -674,7 +678,7 @@
     const slotName = slot === 's' ? 'Перекус' : G.SLOTS.find((x) => x.id === slot).name;
     const rows = [];
     const dishes = s.dishes.map((d) => `<button class="rowi" data-act="eat" data-type="dish" data-uid="${d.uid}">
-      ${pic(d.emoji)}<span class="body"><span class="name">${esc(d.name)}</span><span class="nut">${nutLine(d)}</span></span>
+      ${pic(d)}<span class="body"><span class="name">${esc(d.name)}</span><span class="nut">${nutLine(d)}</span></span>
       <span class="st">${d.portions} ${portionWord(d.portions)}</span></button>`);
     if (dishes.length) rows.push(`<h3>Готовое в холодильнике</h3><div class="rows">${dishes.join('')}</div>`);
 
@@ -683,7 +687,7 @@
         const n = G.recipeNutrition(r.id);
         const portions = Math.min(r.batch, G.maxPortions(s, r.id));
         return `<button class="rowi" data-act="cookeat" data-rid="${r.id}">
-          ${pic(r.emoji)}<span class="body"><span class="name">${esc(r.name)}</span><span class="nut"><span>${r.time} мин${portions > 1 ? ` · ${portions} ${portionWord(portions)}` : ''}</span>${nutLine(n)}</span></span></button>`;
+          ${pic(r)}<span class="body"><span class="name">${esc(r.name)}</span><span class="nut"><span>${r.time} мин${portions > 1 ? ` · ${portions} ${portionWord(portions)}` : ''}</span>${nutLine(n)}</span></span></button>`;
       });
       if (cookable.length) rows.push(`<h3>Приготовить сейчас</h3><p class="hint" style="margin-top:0">Если блюдо на несколько порций, одну съешь сейчас, остальное уберёшь в холодильник.</p><div class="rows">${cookable.join('')}</div>`);
     }
@@ -692,7 +696,7 @@
       const g = Math.min(p.snack, G.stock(s, p.id));
       const n = { kcal: (g * p.kcal) / 100, prot: (g * p.prot) / 100, vf: p.vf ? g : 0 };
       return `<button class="rowi" data-act="eat" data-type="product" data-pid="${p.id}">
-        ${pic(p.emoji)}<span class="body"><span class="name">${esc(p.name)}, ${G.fmtAmount(p.id, g)}</span><span class="nut">${nutLine(n)}</span></span></button>`;
+        ${pic(p)}<span class="body"><span class="name">${esc(p.name)}, ${G.fmtAmount(p.id, g)}</span><span class="nut">${nutLine(n)}</span></span></button>`;
     });
     if (snackable.length) rows.push(`<h3>Без готовки</h3><div class="rows">${snackable.join('')}</div>`);
 
@@ -700,7 +704,7 @@
       const out = N.outside.map((o) => {
         const price = G.outsidePrice(s, o.id);
         return `<button class="rowi" data-act="eat" data-type="outside" data-id="${o.id}" ${price > s.money ? 'disabled' : ''}>
-          ${pic(o.emoji)}<span class="body"><span class="name">${esc(o.name)}</span><span class="nut">${nutLine(o)}</span></span>
+          ${pic(o)}<span class="body"><span class="name">${esc(o.name)}</span><span class="nut">${nutLine(o)}</span></span>
           <span class="amt neg mono small">${rub(price)}</span></button>`;
       });
       rows.push(`<h3>Поесть вне дома</h3><div class="rows">${out.join('')}</div>`);
@@ -721,6 +725,7 @@
     const n = Math.min(ui.modal.n, max);
     const nut = G.recipeNutrition(r.id);
     return `${closeBtn()}
+      <div class="pic-big">${pic(r)}</div>
       <p class="label">Кухня · ${r.time} мин</p><h2>${esc(r.name)}</h2>
       <p class="small muted">Хранится ${r.keep} ${dayWord(r.keep)}. Не готовь больше, чем успеешь съесть.</p>
       <div class="row" style="justify-content:center;margin:1.25rem 0 0.5rem">

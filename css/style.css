@@ -134,6 +134,17 @@ button.rowi[disabled] { opacity: 0.45; cursor: not-allowed; }
   flex: none; width: 2.6rem; height: 2.6rem; display: grid; place-items: center; font-size: 1.45rem; line-height: 1;
   background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r);
 }
+/* Стикеры продуктов и блюд (js/stickers.js): белая кромка, тень и лёгкий наклон, как у наклейки */
+.pic.has-stk { background: none; border: 0; }
+.pic-big { width: 4.25rem; height: 4.25rem; margin: 0 0 0.6rem 0.2rem; }
+.pic-big .pic { width: 100%; height: 100%; }
+.meal .done .i { width: 1rem; height: 1rem; vertical-align: -0.2em; stroke-width: 2.4; }
+.promo { position: relative; padding-right: 3.2rem; }
+.promo .pic { position: absolute; right: 0.45rem; top: 0.5rem; width: 2.3rem; height: 2.3rem; }
+.stk {
+  width: 118%; height: 118%; flex: none; overflow: visible; transform: rotate(var(--tilt, 0deg));
+  filter: drop-shadow(1.3px 0 0 #fff) drop-shadow(-1.3px 0 0 #fff) drop-shadow(0 1.3px 0 #fff) drop-shadow(0 -1.3px 0 #fff) drop-shadow(0 1.5px 1.5px rgba(23, 22, 15, 0.3));
+}
 .nut { display: flex; flex-wrap: wrap; gap: 0 0.75rem; font: 400 0.76rem/1.6 var(--f-mono); color: var(--muted); }
 .nut > span { white-space: nowrap; }
 
