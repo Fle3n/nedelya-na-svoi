@@ -177,6 +177,12 @@ button.rowi[disabled] { opacity: 0.45; cursor: not-allowed; }
 .pricetag .pt-price small { font-size: 0.5em; font-weight: 500; margin-left: 0.1em; }
 .pricetag .pt-bottom { border-top: 1.5px solid var(--tag-ink); padding-top: 0.45rem; font: 500 0.74rem/1.4 var(--f-mono); }
 .cta { display: grid; gap: 0.6rem; max-width: 26rem; }
+/* Ноутбук, ПК, планшет: ценник справа от заголовка, как на афише */
+@media (min-width: 760px) {
+  .home { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; column-gap: 2.5rem; align-items: start; }
+  .home > * { grid-column: 1; }
+  .home .pricetag { grid-column: 2; grid-row: 2 / span 3; width: 100%; margin: 2.2rem 0 0; transform: rotate(-3deg); }
+}
 .steps { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--rule); counter-reset: s; }
 .steps li { display: grid; grid-template-columns: 2.4rem 1fr; column-gap: 0.6rem; padding: 0.75rem 0; border-bottom: 1px solid var(--rule); }
 .steps li::before { counter-increment: s; content: counter(s, decimal-leading-zero); font: 500 0.8rem/1.6 var(--f-mono); color: var(--muted); grid-row: span 2; }
@@ -235,6 +241,7 @@ select.field {
 .receipt {
   --z: 12px;
   background: var(--receipt); color: var(--receipt-ink); padding: calc(var(--z) + 0.9rem) 1.1rem calc(var(--z) + 1rem);
+  overflow: hidden; /* печать при «шлёпе» увеличивается — не даём ей расширить страницу */
   font: 400 0.84rem/1.55 var(--f-mono);
   -webkit-mask:
     conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--z) 51% repeat-x,
@@ -279,6 +286,7 @@ select.field {
   border-bottom: 1.5px solid var(--ink);
 }
 .tb-row { display: flex; align-items: center; gap: 0.6rem; }
+.topbar .icon-btn { flex: none; }
 .tb-day b { display: block; font: 600 1.45rem/1 var(--f-display); text-transform: uppercase; }
 .ticks { display: flex; gap: 3px; margin-top: 0.35rem; }
 .ticks i { width: 0.8rem; height: 0.28rem; background: var(--rule); }
@@ -296,6 +304,27 @@ select.field {
 .meter .track i { display: block; height: 100%; background: var(--ink); transition: width 0.3s var(--ease); }
 .meter.full .track i { background: var(--green); }
 .meter .m-val { font: 500 0.66rem/1.1 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+/* Узкие телефоны (320–400 px): шапка компактнее, чтобы меню и деньги не уезжали за край */
+@media (max-width: 400px) {
+  .tb-row { gap: 0.4rem; }
+  .tb-day b { font-size: 1.2rem; }
+  .tb-money b { font-size: 1.25rem; }
+  .topbar .icon-btn { width: 2.3rem; }
+  .ticks i { width: 0.62rem; }
+}
+@media (max-width: 350px) {
+  .tb-row { gap: 0.3rem; }
+  .tb-day b { font-size: 1.02rem; }
+  .tb-day .label { font-size: 0.62rem; letter-spacing: 0.04em; }
+  .tb-money b { font-size: 1.1rem; }
+  .tb-mood { padding: 0; }
+}
+
+/* Телефон боком: шапка прокручивается вместе со страницей, иначе вместе с нижней панелью съедает полэкрана */
+@media (max-height: 500px) and (orientation: landscape) {
+  .topbar { position: static; }
+  .tabs { top: 0; }
+}
 
 /* ---------- День ---------- */
 .meals { border-top: 1px solid var(--rule); }
@@ -318,7 +347,8 @@ select.field {
 @media (min-width: 560px) { .actionbar .inner .btn { flex-direction: row; gap: 0.5rem; font-size: 1rem; } }
 .actionbar .cart-inner { max-width: 46rem; margin: 0 auto; display: flex; gap: 0.75rem; align-items: center; }
 .cart-sum { flex: 1; min-width: 0; }
-.cart-sum .label, .cart-sum .small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-sum .label { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-sum .small { display: block; line-height: 1.25; }
 .cart-sum b { display: block; font: 600 1.45rem/1.05 var(--f-display); font-variant-numeric: tabular-nums; }
 .cart-sum .over { color: var(--red); font-weight: 700; }
 
@@ -421,7 +451,7 @@ select.field {
 
 /* ---------- Итоги недели ---------- */
 .final { padding-top: 1.25rem; }
-.share-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; margin-top: 0.75rem; }
+.share-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
 .week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.4rem; }
 .week .col { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font: 500 0.68rem/1 var(--f-mono); color: var(--muted); }
 .week .bar { position: relative; width: 100%; height: 7rem; display: flex; align-items: flex-end; justify-content: center; }

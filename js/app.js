@@ -422,7 +422,7 @@
       <div class="products">${items}</div>
       <nav class="actionbar" aria-label="Корзина"><div class="cart-inner">
         <div class="cart-sum"><span class="label">Корзина · ${count} шт.</span><b>${rub(total)}</b>
-          <span class="small ${after < 0 ? 'over' : 'muted'}">${after < 0 ? `Не хватает ${rub(-after)}` : `Останется ${rub(after)}`}</span></div>
+          <span class="small ${after < 0 ? 'over' : 'muted'}">${after < 0 ? `Не хватает <span class="nowrap">${rub(-after)}</span>` : `Останется <span class="nowrap">${rub(after)}</span>`}</span></div>
         ${count ? `<button class="btn ghost icon-btn" data-act="clearcart" aria-label="Очистить корзину" title="Очистить корзину">${icon('trash')}</button>` : ''}
         <button class="btn primary" data-act="pay" ${!count || after < 0 ? 'disabled' : ''}>Оплатить</button>
       </div></nav>`;

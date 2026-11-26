@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Проверка вёрстки на разных экранах — Неделя на свои</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; }
+    .ok { color: #137333; } .fail { color: #c5221f; } .warn { color: #a05a00; }
+    #stage { position: absolute; left: -10000px; top: 0; }
+    iframe { border: 0; display: block; }
+    td, th { padding: 2px 8px; text-align: left; vertical-align: top; }
+  </style>
+</head>
+<body>
+  <h1>Вёрстка на телефонах, планшетах, ноутбуке и ПК</h1>
+  <p>На каждом размере экрана игра проходит все экраны и окна: главная, настройка, неделя, магазин по всем отделам, кухня, окна еды и готовки, ситуация, итоги дня и недели, наставник, итоги группы, меню, правила и крупный шрифт. На каждом шаге проверяется:</p>
+  <ul>
+    <li>нет горизонтальной прокрутки и ничего не вылезает за край экрана;</li>
+    <li>текст не вылезает из кнопок;</li>
+    <li>на телефоне и планшете кнопки не меньше 36 px, чтобы попадать пальцем;</li>
+    <li>нижняя панель не закрывает конец страницы.</li>
+  </ul>
+  <p id="summary">Запуск…</p>
+  <table><tbody id="log"></tbody></table>
+  <div id="stage"></div>
+  <script>
+  const SIZES = [
+    ['Маленький телефон', 320, 568, true],
+    ['Телефон Android', 360, 780, true],
+    ['iPhone', 390, 844, true],
+    ['Телефон боком', 780, 360, true],
+    ['Планшет', 768, 1024, true],
+    ['Планшет боком', 1024, 768, true],
+    ['Ноутбук', 1366, 768, false],
+    ['ПК', 1920, 1080, false],
+  ];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const report = [];
+
+  function describe(el) {
+    const cls = typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '';
+    const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    return `${el.tagName.toLowerCase()}${cls}${text ? ` «${text}»` : ''}`;
+  }
+
+  function audit(w, d, step, touch, issues) {
+    const vw = d.documentElement.clientWidth;
+    const vh = w.innerHeight;
+    const add = (msg) => { if (!issues.some((x) => x.msg === msg)) issues.push({ step, msg }); };
+    if (d.documentElement.scrollWidth > vw + 1) add(`горизонтальная прокрутка: ширина страницы ${d.documentElement.scrollWidth} при экране ${vw}`);
+    for (const el of d.querySelectorAll('#app *, #modal-root *')) {
+      if (el.closest('svg, .tabs, .table-wrap')) continue;
+      const st = w.getComputedStyle(el);
+      if (st.display === 'none' || st.visibility === 'hidden') continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      if (r.right > vw + 1.5 || r.left < -1.5) add(`за краем экрана: ${describe(el)} (${Math.round(r.left)}…${Math.round(r.right)} из ${vw})`);
+      if (el.matches('button, .btn') && el.scrollWidth > el.clientWidth + 1) add(`текст вылезает из кнопки: ${describe(el)}`);
+      if (touch && el.matches('button, select, input, textarea') && !el.disabled && (r.height < 35.5 || r.width < 35.5)) add(`мелкая кнопка ${Math.round(r.width)}×${Math.round(r.height)}: ${describe(el)}`);
+    }
+    const bar = d.querySelector('.actionbar');
+    const app = d.getElementById('app');
+    if (bar && parseFloat(w.getComputedStyle(app).paddingBottom) < bar.offsetHeight + 8) add('нижняя панель может закрыть конец страницы');
+    const top = d.querySelector('.topbar');
+    if (top && bar && (top.offsetHeight + bar.offsetHeight) > vh * 0.6) add(`шапка и нижняя панель занимают ${Math.round(((top.offsetHeight + bar.offsetHeight) / vh) * 100)}% высоты экрана`);
+    const modal = d.querySelector('.modal');
+    if (modal && modal.getBoundingClientRect().bottom > vh + 1) add(`окно не помещается по высоте: ${describe(modal)}`);
+  }
+
+  async function runSize([name, width, height, touch]) {
+    const issues = [];
+    const stage = document.getElementById('stage');
+    stage.innerHTML = '';
+    try { ['nns-save-v1', 'nns-pref-v1', 'nns-group-v1'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    const f = document.createElement('iframe');
+    f.width = width; f.height = height;
+    stage.appendChild(f);
+    f.src = '../index.html';
+    await new Promise((r) => f.addEventListener('load', r, { once: true }));
+    const w = f.contentWindow, d = f.contentDocument;
+    w.print = () => {};
+    // анимации выключены: иначе проверка застаёт окна и печать посреди движения
+    const still = d.createElement('style');
+    still.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; }';
+    d.head.appendChild(still);
+    const errors = [];
+    w.addEventListener('error', (e) => errors.push(e.message));
+    await w.document.fonts.ready;
+    const A = () => w.NNS.app.actions, ui = () => w.NNS.app.ui, G = w.NNS.engine;
+    const check = async (step) => { await sleep(30); audit(w, d, step, touch, issues); };
+    let steps = 0;
+    const doStep = async (step, fn) => { steps++; try { if (fn) fn(); await check(step); } catch (e) { issues.push({ step, msg: 'ошибка: ' + e.message }); } };
+
+    await doStep('главная');
+    await doStep('новая неделя', () => A().go({ to: 'setup' }));
+    await doStep('вступление', () => { A().setup({ k: 'hero', v: 'misha' }); A().start(); });
+    await doStep('день 1', () => A().begin());
+    for (const c of w.NNS.categories) await doStep(`магазин: ${c.name}`, () => { if (ui().screen !== 'shop') A().go({ to: 'shop' }); A().cat({ cat: c.id }); });
+    await doStep('корзина', () => { ['grechka', 'yaica', 'moloko', 'okorochka', 'kartofel', 'morkov', 'luk', 'kapusta', 'yabloki', 'hleb', 'maslo_pods', 'gerkules'].forEach((pid) => A().qty({ pid, d: 1 })); });
+    await doStep('после оплаты', () => A().pay());
+    await doStep('кухня', () => A().go({ to: 'kitchen' }));
+    await doStep('окно готовки', () => A().cookopen({ rid: 'grechka_kur' }));
+    await doStep('приготовлено', () => A().cook());
+    await doStep('выбор еды', () => { A().go({ to: 'day' }); A().meal({ slot: 'b' }); });
+    await doStep('съеден завтрак', () => A().cookeat({ rid: 'omlet' }));
+    await doStep('меню', () => A().menu());
+    await doStep('правила', () => A().rules());
+    await doStep('закончить день?', () => { A().closemodal(); A().endday(); });
+    await doStep('итоги дня', () => { if (ui().modal && ui().modal.type === 'confirmEnd') A().endconfirm(); });
+    await doStep('ситуация дня', () => A().nextday());
+    await doStep('результат ситуации', () => { if (ui().modal && ui().modal.type === 'event') A().choice({ i: 0 }); });
+    await doStep('итоги недели', () => {
+      A().closemodal();
+      w.NNS.autoplay.playWeek(w.NNS.app.game, G.DAYS);
+      A().nextday();
+    });
+    await doStep('наставник', () => A().go({ to: 'mentor' }));
+    await doStep('итоги группы', () => { A().go({ to: 'group' }); A().groupsample(); });
+    await doStep('крупный шрифт: итоги группы', () => A().big());
+    await doStep('крупный шрифт: итоги недели', () => A().go({ to: 'final' }));
+    await doStep('крупный шрифт: главная', () => A().go({ to: 'home' }));
+    A().big();
+    if (errors.length) issues.push({ step: 'весь проход', msg: 'ошибки JavaScript: ' + errors.join(' | ') });
+    report.push({ name, width, height, steps, issues });
+    const row = document.createElement('tr');
+    row.innerHTML = `<th class="${issues.length ? 'fail' : 'ok'}">${issues.length ? '✗' : '✓'} ${name} ${width}×${height}</th><td>${steps} шагов. ${issues.length ? issues.map((x) => `<div class="fail">${x.step}: ${x.msg}</div>`).join('') : '<span class="ok">замечаний нет</span>'}</td>`;
+    document.getElementById('log').appendChild(row);
+  }
+
+  (async () => {
+    for (const s of SIZES) await runSize(s);
+    const bad = report.filter((r) => r.issues.length).length;
+    const s = document.getElementById('summary');
+    s.textContent = bad ? `Есть замечания на ${bad} из ${report.length} размеров экрана` : `Все ${report.length} размеров экрана без замечаний`;
+    s.className = bad ? 'fail' : 'ok';
+    window.__layout = report;
+  })();
+  </script>
+</body>
+</html>
