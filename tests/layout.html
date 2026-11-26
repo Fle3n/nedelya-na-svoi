@@ -58,6 +58,16 @@
       if (el.matches('button, .btn') && el.scrollWidth > el.clientWidth + 1) add(`текст вылезает из кнопки: ${describe(el)}`);
       if (touch && el.matches('button, select, input, textarea') && !el.disabled && (r.height < 35.5 || r.width < 35.5)) add(`мелкая кнопка ${Math.round(r.width)}×${Math.round(r.height)}: ${describe(el)}`);
     }
+    // текст не должен заезжать под стикер, ценник или наклейку срока
+    const PAIRS = [['.promo', '.nm', '.pic'], ['.product', '.info', '.ptag'], ['.meal', '.name', '.pic'], ['.rowi', '.body', '.st'], ['.rowi', '.body', '.btn']];
+    for (const [box, a, b] of PAIRS) {
+      for (const el of d.querySelectorAll(box)) {
+        const x = el.querySelector(a), y = el.querySelector(b);
+        if (!x || !y) continue;
+        const p = x.getBoundingClientRect(), q = y.getBoundingClientRect();
+        if (p.right > q.left + 1 && q.right > p.left + 1 && p.bottom > q.top + 1 && q.bottom > p.top + 1) add(`наложение: ${describe(x)} и ${describe(y)}`);
+      }
+    }
     const bar = d.querySelector('.actionbar');
     const app = d.getElementById('app');
     if (bar && parseFloat(w.getComputedStyle(app).paddingBottom) < bar.offsetHeight + 8) add('нижняя панель может закрыть конец страницы');
