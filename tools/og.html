@@ -5,16 +5,28 @@
 <title>Картинка для соцсетей и иконки</title>
 <!-- Открыть в браузере: tools/og.html — карточка 1200×630; tools/og.html?icon=192 — иконка 192×192 -->
 <style>
+  @font-face { font-family: "Oswald"; src: url("../fonts/Oswald.woff2") format("woff2"); font-weight: 200 700; }
+  @font-face { font-family: "Golos Text"; src: url("../fonts/GolosText.woff2") format("woff2"); font-weight: 400 900; }
+  @font-face { font-family: "JetBrains Mono"; src: url("../fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; }
   html, body { margin: 0; background: transparent; }
   .icon { position: absolute; left: 0; top: 0; }
-  .og { width: 1200px; height: 630px; box-sizing: border-box; padding: 72px 80px; background: #f7f4ee; color: #1c2228;
-        font-family: "Segoe UI", system-ui, sans-serif; display: flex; gap: 56px; align-items: center; position: relative; overflow: hidden; }
-  .og h1 { font-size: 88px; margin: 0 0 16px; letter-spacing: -1px; }
-  .og p { font-size: 34px; margin: 0 0 28px; color: #4b5560; line-height: 1.35; }
-  .og .tags { display: flex; gap: 14px; flex-wrap: wrap; }
-  .og .tag { font-size: 26px; font-weight: 700; padding: 10px 20px; border-radius: 999px; background: #e3f2ea; color: #1f7a52; }
-  .og .tag.o { background: #fdeadb; color: #c8611b; }
-  .og .art { font-size: 110px; line-height: 1.15; text-align: center; flex: none; width: 380px; white-space: nowrap; }
+  .og {
+    width: 1200px; height: 630px; box-sizing: border-box; padding: 56px 72px 0; background: #f2eee5; color: #17160f;
+    font-family: "Golos Text", sans-serif; position: relative; overflow: hidden;
+  }
+  .og .label { font: 600 22px/1 "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #69655b; }
+  .og h1 { font: 600 140px/0.9 "Oswald", sans-serif; text-transform: uppercase; margin: 24px 0 26px; }
+  .og p { font-size: 30px; line-height: 1.35; margin: 0; max-width: 620px; }
+  .og .rule { position: absolute; left: 72px; right: 72px; bottom: 40px; border-top: 3px solid #17160f; padding-top: 16px;
+    font: 500 20px/1 "JetBrains Mono", monospace; color: #69655b; }
+  .og .tag {
+    position: absolute; right: 80px; top: 112px; width: 420px; box-sizing: border-box; padding: 22px 26px 24px;
+    background: #ffd42a; border: 4px solid #17160f; border-radius: 6px; transform: rotate(-3deg);
+  }
+  .og .tag .top { display: flex; justify-content: space-between; font: 700 18px/1 "JetBrains Mono", monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+  .og .tag .price { font: 600 120px/1 "Oswald", sans-serif; margin: 14px 0 16px; white-space: nowrap; }
+  .og .tag .price small { font-size: 60px; font-weight: 500; margin-left: 6px; }
+  .og .tag .bottom { border-top: 3px solid #17160f; padding-top: 12px; font: 500 20px/1.35 "JetBrains Mono", monospace; }
 </style>
 </head>
 <body>
@@ -24,10 +36,14 @@
     document.body.innerHTML = `<img class="icon" src="../icons/icon.svg" width="${size}" height="${size}" alt="">`;
   } else {
     document.body.innerHTML = `<div class="og">
-      <div><h1>Неделя на свои</h1>
-        <p>Первая неделя самостоятельной жизни. Бюджет, покупки, готовка и сроки годности — на реальных ценах твоего региона.</p>
-        <div class="tags"><span class="tag">82 региона · цены Росстата</span><span class="tag o">для программы «Готовим будущее»</span></div></div>
-      <div class="art">🛒🍳<br>🥕💰</div></div>`;
+      <div class="label">Игра-тренажёр · 82 региона · цены Росстата</div>
+      <h1>Неделя<br>на свои</h1>
+      <p>Первая неделя самостоятельной жизни на реальных ценах твоего региона.</p>
+      <div class="tag"><div class="top"><span>Неделя еды</span><span>7 дней</span></div>
+        <div class="price">2 450<small>₽</small></div>
+        <div class="bottom">Нижегородская область<br>цены Росстата, октябрь 2026</div></div>
+      <div class="rule">Для программы «Готовим будущее» фонда «Выручаем»</div>
+    </div>`;
   }
 </script>
 </body>
