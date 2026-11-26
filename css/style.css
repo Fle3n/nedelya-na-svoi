@@ -487,8 +487,9 @@ textarea.field { min-height: 8.5rem; resize: vertical; line-height: 1.45; font: 
 .app.enter > *:nth-child(n + 5) { animation-delay: 0.12s; }
 .app.enter .stamp { animation: stamp 0.5s 0.35s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
 .app.enter > .topbar, .app.enter > .actionbar { animation: none; }
-@keyframes rise { from { opacity: 0; transform: translateY(0.6rem); } }
-@keyframes stamp { from { opacity: 0; transform: rotate(-3.5deg) scale(1.6); } }
+/* Только сдвиг, без прозрачности: если браузер не проиграет анимацию (фоновая вкладка, слабый телефон), всё равно всё видно */
+@keyframes rise { from { transform: translateY(0.75rem); } }
+@keyframes stamp { from { transform: rotate(-3.5deg) scale(1.45); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 /* ---------- Печать ---------- */
