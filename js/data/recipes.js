@@ -1,0 +1,85 @@
+// Рецепты: ингредиенты на ОДНУ порцию в граммах (мл).
+//   batch — сколько порций обычно готовят за раз (игрок может изменить)
+//   keep  — сколько дней готовое блюдо хранится в холодильнике, включая день готовки
+//   time  — минут на готовку (для подсказки)
+//   cold  — без плиты: можно сделать даже без кухни
+window.NNS = window.NNS || {};
+
+NNS.recipes = [
+  // Завтраки
+  { id: 'ovsyanka', name: 'Овсянка на молоке', emoji: '🥣', batch: 1, keep: 1, time: 10,
+    ing: [['gerkules', 60], ['moloko', 200], ['sahar', 10]],
+    tip: 'Самый дешёвый сытный завтрак. Хлопья варятся 5 минут.' },
+  { id: 'ovsyanka_yabl', name: 'Овсянка с яблоком', emoji: '🍏', batch: 1, keep: 1, time: 10,
+    ing: [['gerkules', 60], ['moloko', 200], ['yabloki', 120]],
+    tip: 'Яблоко даёт сладость без сахара и засчитывается в овощи и фрукты.' },
+  { id: 'psh_kasha', name: 'Пшённая каша на молоке', emoji: '🟡', batch: 2, keep: 2, time: 30,
+    ing: [['psheno', 60], ['moloko', 200], ['sahar', 10]],
+    tip: 'Пшено дешевле гречки. Перед варкой промой крупу горячей водой — уйдёт горечь.' },
+  { id: 'omlet', name: 'Омлет', emoji: '🍳', batch: 1, keep: 1, time: 10,
+    ing: [['yaica', 110], ['moloko', 50], ['maslo_pods', 5]],
+    tip: 'Два яйца — почти 14 г белка. Яйца хранятся несколько недель — удобно держать дома.' },
+  { id: 'yaichnica', name: 'Яичница с хлебом', emoji: '🍳', batch: 1, keep: 1, time: 7,
+    ing: [['yaica', 110], ['hleb', 60], ['maslo_pods', 5]],
+    tip: 'Быстро и сытно. Хлеб ржаной — в нём больше клетчатки.' },
+  { id: 'tvorog_smet', name: 'Творог со сметаной', emoji: '🥄', batch: 1, keep: 1, time: 2, cold: true,
+    ing: [['tvorog', 150], ['smetana', 30], ['sahar', 10]],
+    tip: 'Без готовки и много белка. Творог храни в холодильнике и съешь за 2–3 дня после вскрытия.' },
+  { id: 'buterbrod', name: 'Бутерброды с сыром и чай', emoji: '🥪', batch: 1, keep: 1, time: 3, cold: true,
+    ing: [['baton', 80], ['syr', 40], ['chai', 2]],
+    tip: 'Сыр дорогой за килограмм, но на бутерброд его нужно мало.' },
+
+  // Супы — варить сразу на несколько дней
+  { id: 'shchi', name: 'Щи из свежей капусты', emoji: '🍲', batch: 4, keep: 3, time: 40,
+    ing: [['kapusta', 120], ['kartofel', 100], ['morkov', 30], ['luk', 25], ['maslo_pods', 5]],
+    tip: 'Кастрюля щей на 4 обеда стоит дешевле одного обеда в столовой.' },
+  { id: 'borsch', name: 'Борщ с тушёнкой', emoji: '🍲', batch: 4, keep: 3, time: 60,
+    ing: [['svekla', 70], ['kapusta', 70], ['kartofel', 80], ['morkov', 25], ['luk', 25], ['tushenka', 60], ['maslo_pods', 5]],
+    tip: 'Тушёнка заменяет мясо и хранится годами — удобно держать банку про запас.' },
+  { id: 'gorohovy', name: 'Гороховый суп', emoji: '🫛', batch: 4, keep: 3, time: 70,
+    ing: [['goroh', 60], ['kartofel', 80], ['morkov', 25], ['luk', 25], ['maslo_pods', 5]],
+    tip: 'Горох — самый дешёвый белок в магазине. Замочи его с вечера, сварится быстрее.' },
+
+  // Горячее
+  { id: 'grechka_luk', name: 'Гречка с жареным луком', emoji: '🌾', batch: 2, keep: 3, time: 25,
+    ing: [['grechka', 80], ['luk', 40], ['maslo_pods', 10]],
+    tip: 'Сытно и дёшево, но белка маловато — добавь яйцо или творог в другой приём пищи.' },
+  { id: 'grechka_kur', name: 'Гречка с курицей', emoji: '🍗', batch: 3, keep: 3, time: 50,
+    ing: [['grechka', 80], ['okorochka', 200], ['luk', 30], ['morkov', 30], ['maslo_pods', 10]],
+    tip: 'Окорочка — недорогое мясо. Один килограмм — это 5 порций.' },
+  { id: 'plov', name: 'Плов с курицей', emoji: '🥘', batch: 3, keep: 3, time: 60,
+    ing: [['ris', 80], ['okorochka', 200], ['morkov', 60], ['luk', 40], ['maslo_pods', 15]],
+    tip: 'Морковь в плове — это ещё и порция овощей.' },
+  { id: 'makarony_flot', name: 'Макароны по-флотски', emoji: '🍝', batch: 3, keep: 3, time: 25,
+    ing: [['makarony', 100], ['farsh', 100], ['luk', 30], ['maslo_pods', 10]],
+    tip: 'Фарш портится за 1–2 дня. Не успеваешь — заморозь его в день покупки.' },
+  { id: 'makarony_tush', name: 'Макароны с тушёнкой', emoji: '🥫', batch: 3, keep: 3, time: 15,
+    ing: [['makarony', 100], ['tushenka', 110]],
+    tip: 'Ужин из двух продуктов, которые не портятся. Хороший «аварийный запас».' },
+  { id: 'makarony_syr', name: 'Макароны с сыром', emoji: '🧀', batch: 1, keep: 2, time: 15,
+    ing: [['makarony', 100], ['syr', 30], ['maslo_sl', 10]],
+    tip: 'Вкусно, но овощей ноль — добавь салат.' },
+  { id: 'ris_ovoshi', name: 'Рис с овощами', emoji: '🥦', batch: 2, keep: 2, time: 25,
+    ing: [['ris', 80], ['ovoshi_zam', 150], ['maslo_pods', 10]],
+    tip: 'Замороженные овощи не портятся и не требуют чистки.' },
+  { id: 'pyure_sosiski', name: 'Пюре с сосисками', emoji: '🌭', batch: 1, keep: 2, time: 30,
+    ing: [['kartofel', 250], ['moloko', 50], ['maslo_sl', 10], ['sosiski', 100]],
+    tip: 'Сосиски удобные, но белок в них дорогой: курица выгоднее почти вдвое.' },
+  { id: 'kartoshka_zhar', name: 'Жареная картошка с луком', emoji: '🥔', batch: 1, keep: 1, time: 25,
+    ing: [['kartofel', 300], ['luk', 40], ['maslo_pods', 20]],
+    tip: 'Сытно и дёшево, но масла много, а белка почти нет.' },
+  { id: 'kartoshka_ryba', name: 'Картошка с рыбными консервами', emoji: '🐟', batch: 1, keep: 1, time: 25,
+    ing: [['kartofel', 250], ['ryba_konserv', 120]],
+    tip: 'В рыбных консервах много белка и полезных жиров.' },
+  { id: 'pelmeni_smet', name: 'Пельмени со сметаной', emoji: '🥟', batch: 1, keep: 1, time: 12,
+    ing: [['pelmeni', 250], ['smetana', 30]],
+    tip: 'Быстро, но за килограмм дороже курицы, а мяса в пельменях меньше половины.' },
+
+  // Салаты
+  { id: 'salat_kapusta', name: 'Салат из капусты и моркови', emoji: '🥗', batch: 2, keep: 2, time: 10, cold: true,
+    ing: [['kapusta', 120], ['morkov', 50], ['maslo_pods', 10]],
+    tip: 'Самый дешёвый способ добрать овощи: капуста и морковь недорогие круглый год.' },
+  { id: 'salat_ovoshi', name: 'Салат из огурцов и помидоров', emoji: '🥗', batch: 1, keep: 1, time: 7, cold: true,
+    ing: [['ogurcy', 100], ['pomidory', 100], ['smetana', 20]],
+    tip: 'Зимой огурцы и помидоры дорогие — капуста с морковью дешевле в несколько раз.' },
+];

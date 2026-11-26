@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Картинка для соцсетей и иконки</title>
+<!-- Открыть в браузере: tools/og.html — карточка 1200×630; tools/og.html?icon=192 — иконка 192×192 -->
+<style>
+  html, body { margin: 0; background: transparent; }
+  .icon { position: absolute; left: 0; top: 0; }
+  .og { width: 1200px; height: 630px; box-sizing: border-box; padding: 72px 80px; background: #f7f4ee; color: #1c2228;
+        font-family: "Segoe UI", system-ui, sans-serif; display: flex; gap: 56px; align-items: center; position: relative; overflow: hidden; }
+  .og h1 { font-size: 88px; margin: 0 0 16px; letter-spacing: -1px; }
+  .og p { font-size: 34px; margin: 0 0 28px; color: #4b5560; line-height: 1.35; }
+  .og .tags { display: flex; gap: 14px; flex-wrap: wrap; }
+  .og .tag { font-size: 26px; font-weight: 700; padding: 10px 20px; border-radius: 999px; background: #e3f2ea; color: #1f7a52; }
+  .og .tag.o { background: #fdeadb; color: #c8611b; }
+  .og .art { font-size: 110px; line-height: 1.15; text-align: center; flex: none; width: 380px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<script>
+  const size = Number(new URLSearchParams(location.search).get('icon'));
+  if (size) {
+    document.body.innerHTML = `<img class="icon" src="../icons/icon.svg" width="${size}" height="${size}" alt="">`;
+  } else {
+    document.body.innerHTML = `<div class="og">
+      <div><h1>Неделя на свои</h1>
+        <p>Первая неделя самостоятельной жизни. Бюджет, покупки, готовка и сроки годности — на реальных ценах твоего региона.</p>
+        <div class="tags"><span class="tag">82 региона · цены Росстата</span><span class="tag o">для программы «Готовим будущее»</span></div></div>
+      <div class="art">🛒🍳<br>🥕💰</div></div>`;
+  }
+</script>
+</body>
+</html>

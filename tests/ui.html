@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Сквозной тест интерфейса — Неделя на свои</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; }
+    .ok { color: #137333; } .fail { color: #c5221f; font-weight: 700; }
+    iframe { width: 420px; height: 760px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Сквозной тест: неделя от старта до итогов</h1>
+  <p id="summary">Запуск…</p>
+  <ol id="log"></ol>
+  <iframe id="f" title="Игра"></iframe>
+  <script>
+  (async function () {
+    const log = (msg, ok = true) => {
+      const li = document.createElement('li');
+      li.className = ok ? 'ok' : 'fail';
+      li.textContent = (ok ? '✓ ' : '✗ ') + msg;
+      document.getElementById('log').appendChild(li);
+      if (!ok) failures.push(msg);
+    };
+    const failures = [];
+    const errors = [];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const f = document.getElementById('f');
+    try { ['nns-save-v1', 'nns-pref-v1', 'nns-group-v1'].forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+    f.src = '../index.html';
+    await new Promise((r) => f.addEventListener('load', r, { once: true }));
+    const w = f.contentWindow;
+    const d = f.contentDocument;
+    w.addEventListener('error', (e) => errors.push(e.message));
+    w.print = () => {}; // печать в тесте не открываем
+    const q = (sel) => d.querySelector(sel);
+    const qa = (sel) => Array.from(d.querySelectorAll(sel));
+    const click = (sel, text) => {
+      const el = qa(sel).find((x) => !x.disabled && (!text || x.textContent.includes(text)));
+      if (!el) throw new Error(`не нашёл кнопку ${sel} ${text || ''}`);
+      el.click();
+      return el;
+    };
+    const step = (name, fn) => {
+      try { const r = fn(); log(name + (r ? ` — ${r}` : '')); }
+      catch (e) { log(`${name}: ${e.message}`, false); }
+    };
+    const app = () => w.NNS.app;
+
+    step('главная открылась', () => { if (!d.body.textContent.includes('Неделя на свои')) throw new Error('нет заголовка'); });
+    step('настройка недели', () => {
+      click('[data-act="go"][data-to="setup"]');
+      click('[data-act="setup"][data-k="hero"]', 'Миша');
+      const sel = q('#region');
+      sel.value = '22000000000';
+      sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+      click('[data-act="setup"][data-k="level"]', 'Туго');
+      const seed = q('#seed');
+      seed.value = 'тест-42';
+      seed.dispatchEvent(new w.Event('input', { bubbles: true }));
+      click('[data-act="start"]');
+      const g = app().game;
+      if (g.region !== '22000000000' || g.hero !== 'misha' || g.level !== 'hard' || g.seed !== 'ТЕСТ-42') throw new Error(JSON.stringify([g.region, g.hero, g.level, g.seed]));
+      return `бюджет ${g.budget} ₽`;
+    });
+    step('вступление → понедельник', () => { click('[data-act="begin"]'); if (app().ui.screen !== 'day') throw new Error(app().ui.screen); });
+    step('магазин: корзина и оплата', () => {
+      click('[data-act="go"][data-to="shop"]');
+      const buy = { grain: ['grechka', 'gerkules'], dairy: ['moloko', 'yaica'], meat: ['okorochka'], veg: ['luk', 'morkov', 'kapusta', 'yabloki', 'kartofel'], pantry: ['maslo_pods'], bread: ['hleb'] };
+      for (const [cat, pids] of Object.entries(buy)) {
+        click(`[data-act="cat"][data-cat="${cat}"]`);
+        for (const pid of pids) click(`[data-act="qty"][data-pid="${pid}"][data-d="1"]`);
+      }
+      const before = app().game.money;
+      click('[data-act="pay"]');
+      const after = app().game.money;
+      if (!(after < before)) throw new Error('деньги не списались');
+      if (app().ui.screen !== 'day') throw new Error('не вернулись домой');
+      return `потрачено ${before - after} ₽`;
+    });
+    step('кухня: приготовить гречку с курицей на 3 порции', () => {
+      click('[data-act="go"][data-to="kitchen"]');
+      click('[data-act="cookopen"][data-rid="grechka_kur"]');
+      if (!q('.modal')) throw new Error('нет окна готовки');
+      click('[data-act="cook"]');
+      const dish = app().game.dishes.find((x) => x.rid === 'grechka_kur');
+      if (!dish || dish.portions !== 3) throw new Error('блюдо не появилось');
+    });
+    step('завтрак: приготовить и съесть омлет', () => {
+      click('[data-act="go"][data-to="day"]');
+      click('[data-act="meal"][data-slot="b"]');
+      click('[data-act="cookeat"][data-rid="omlet"]');
+      if (!app().game.days[1].meals.b) throw new Error('завтрак не засчитан');
+    });
+    step('обед и ужин из готового', () => {
+      click('[data-act="meal"][data-slot="l"]'); click('[data-act="eat"][data-type="dish"]');
+      click('[data-act="meal"][data-slot="d"]'); click('[data-act="eat"][data-type="dish"]');
+      const m = app().game.days[1].meals;
+      if (!m.l || !m.d) throw new Error('не поели');
+    });
+    step('перекус яблоком', () => {
+      click('[data-act="meal"][data-slot="s"]'); click('[data-act="eat"][data-type="product"][data-pid="yabloki"]');
+      if (app().game.days[1].snacks.length !== 1) throw new Error('нет перекуса');
+    });
+    step('заморозка курицы', () => {
+      if (!q('[data-act="freeze"][data-pid="okorochka"]')) return 'курица уже кончилась — пропуск';
+      click('[data-act="freeze"][data-pid="okorochka"]');
+      if (!app().game.pantry.filter((e) => e.pid === 'okorochka').every((e) => e.frozen)) throw new Error('не заморозилась');
+    });
+    step('конец дня → сводка → вторник', () => {
+      click('[data-act="endday"]');
+      if (app().ui.modal.type !== 'summary') throw new Error('нет сводки: ' + app().ui.modal.type);
+      click('[data-act="nextday"]');
+      if (app().game.day !== 2) throw new Error('день не сменился');
+    });
+    for (let day = 2; day <= 7; day++) {
+      step(`день ${day}: событие`, () => {
+        if (!app().ui.modal || app().ui.modal.type !== 'event') throw new Error('нет события');
+        const title = app().ui.modal.ev.title;
+        click('[data-act="choice"]');
+        if (!app().ui.modal.done) throw new Error('нет результата');
+        click('[data-act="closemodal"]');
+        return title;
+      });
+      step(`день ${day}: поесть хоть что-то и закончить день`, () => {
+        const g = app().game;
+        if (g.dishes.length) { click('[data-act="meal"][data-slot="l"]'); click('[data-act="eat"][data-type="dish"]'); }
+        else if (g.money > 1000) { click('[data-act="meal"][data-slot="l"]'); click('[data-act="eat"][data-type="outside"]', 'столовой'); }
+        click('[data-act="endday"]');
+        if (app().ui.modal.type === 'confirmEnd') click('[data-act="endconfirm"]');
+        if (app().ui.modal.type !== 'summary') throw new Error('нет сводки');
+        click('[data-act="nextday"]');
+        return `деньги ${Math.round(g.money)} ₽, настроение ${g.mood}`;
+      });
+    }
+    step('итоги недели', () => {
+      if (app().ui.screen !== 'final') throw new Error(app().ui.screen);
+      const stars = qa('.metric').length;
+      if (stars !== 6) throw new Error('показателей ' + stars);
+      return q('.score-hero h1').textContent.trim();
+    });
+    step('печать итогов не падает', () => { click('[data-act="print"][data-what="report"]'); if (!d.getElementById('print-root').innerHTML.includes('мои итоги')) throw new Error('пусто'); });
+    let playerCode = '';
+    step('код итога для наставника', () => {
+      playerCode = q('.result-code').textContent.trim();
+      const dec = w.NNS.results.decode(playerCode);
+      if (!dec) throw new Error('код не читается: ' + playerCode);
+      if (dec.total !== w.NNS.engine.report(app().game).total) throw new Error('звёзды не совпадают');
+      if (app().game.attempt !== 1) throw new Error('попытка ' + app().game.attempt);
+      click('[data-act="copycode"]');
+      return playerCode;
+    });
+    step('наставник: итоги группы из переписки', () => {
+      click('[data-act="go"][data-to="mentor"]');
+      click('[data-act="go"][data-to="group"]');
+      if (app().ui.screen !== 'group') throw new Error(app().ui.screen);
+      click('[data-act="groupsample"]');
+      const ta = q('#group-text');
+      ta.value = ta.value + '\nЯ: ' + playerCode;
+      ta.dispatchEvent(new w.Event('input', { bubbles: true }));
+      click('[data-act="groupcalc"]');
+      const rows = qa('.gtable tbody tr').length;
+      if (rows !== 10) throw new Error('строк в таблице ' + rows);
+      if (!q('#group-results')) throw new Error('нет сводки');
+      click('[data-act="print"][data-what="group"]');
+      if (!d.getElementById('print-root').innerHTML.includes('итоги группы')) throw new Error('печать пустая');
+      click('[data-act="groupclear"]');
+      if (q('.gtable')) throw new Error('не очистилось');
+      return `${rows} игроков`;
+    });
+    step('наставник: смена региона и печать', () => {
+      click('[data-act="go"][data-to="mentor"]');
+      const sel = q('[data-change="mentorRegion"]');
+      sel.value = '86000000000';
+      sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+      if (!d.body.textContent.includes('Карелия')) throw new Error('регион не сменился');
+      click('[data-act="print"][data-what="cheatsheet"]');
+      click('[data-act="print"][data-what="worksheet"]');
+    });
+    step('крупный шрифт', () => { click('[data-act="big"]'); if (!d.body.classList.contains('big')) throw new Error('нет класса'); click('[data-act="big"]'); });
+    step('сохранение в localStorage', () => {
+      const raw = w.localStorage.getItem('nns-save-v1');
+      if (!raw || !JSON.parse(raw).finished) throw new Error('не сохранилось');
+    });
+    step('нет ошибок JavaScript', () => { if (errors.length) throw new Error(errors.join(' | ')); });
+
+    window.__uiResults = { failures, errors };
+    const s = document.getElementById('summary');
+    s.textContent = failures.length ? `Провалено шагов: ${failures.length}` : 'Все шаги пройдены';
+    s.className = failures.length ? 'fail' : 'ok';
+  })();
+  </script>
+</body>
+</html>
