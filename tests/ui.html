@@ -169,6 +169,41 @@
       if (q('.gtable')) throw new Error('не очистилось');
       return `${rows} игроков`;
     });
+    step('шапка сайта: разделы открываются и получают свою ссылку', () => {
+      for (const [to, text] of [['list', 'Список покупок на неделю'], ['album', 'Альбом наклеек'], ['fund', 'Тренажёр для «Готовим будущее»']]) {
+        click(`.site-nav [data-to="${to}"]`);
+        if (app().ui.screen !== to) throw new Error(`не открылся ${to}`);
+        if (!d.body.textContent.includes(text)) throw new Error(`нет текста «${text}»`);
+        if (w.location.hash !== '#' + to) throw new Error('адрес ' + w.location.hash);
+      }
+    });
+    step('список покупок: регион, герой, печать', () => {
+      click('.site-nav [data-to="list"]');
+      const sel = q('[data-change="planRegion"]');
+      sel.value = '86000000000';
+      sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+      click('[data-act="planset"][data-k="hero"]', 'Парень');
+      const rows = qa('.trip .rowi').length;
+      if (rows < 10) throw new Error('позиций в списке ' + rows);
+      const tick = q('.tick');
+      tick.click();
+      if (!tick.checked) throw new Error('галочка не ставится');
+      click('[data-act="print"][data-what="list"]');
+      if (!d.getElementById('print-root').innerHTML.includes('Список покупок')) throw new Error('печать пустая');
+      click('[data-act="plancopy"]');
+      return `${rows} позиций, ${q('#plan-results .tile b').textContent}`;
+    });
+    step('альбом: наклейки за прожитую неделю', () => {
+      click('.site-nav [data-to="album"]');
+      const got = qa('.stk-card.got').length;
+      if (!got) throw new Error('ни одной наклейки после недели');
+      return `${got} из ${w.NNS.album.LIST.length}`;
+    });
+    step('для фонда: одностраничник печатается', () => {
+      click('.site-nav [data-to="fund"]');
+      click('[data-act="print"][data-what="fund"]');
+      if (!d.getElementById('print-root').innerHTML.includes('Готовим будущее')) throw new Error('печать пустая');
+    });
     step('наставник: смена региона и печать', () => {
       click('[data-act="go"][data-to="mentor"]');
       const sel = q('[data-change="mentorRegion"]');

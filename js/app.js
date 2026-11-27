@@ -8,6 +8,9 @@
   const SAVE_KEY = 'nns-save-v1';
   const PREF_KEY = 'nns-pref-v1';
   const GROUP_KEY = 'nns-group-v1'; // текст с кодами группы — только на устройстве наставника
+  const ALBUM_KEY = 'nns-album-v1'; // собранные наклейки: { id: дата }
+  // Разделы сайта с собственной ссылкой: …/#fund, …/#list и т. д.
+  const PAGES = ['mentor', 'group', 'list', 'album', 'fund'];
 
   const $app = document.getElementById('app');
   const $modal = document.getElementById('modal-root');
@@ -46,9 +49,10 @@
   }
   function savePref() { writeJSON(PREF_KEY, pref); }
 
-  const demoScreens = { day: 'day', event: 'day', shop: 'shop', kitchen: 'kitchen', meal: 'day', final: 'final', mentor: 'mentor', group: 'group', setup: 'setup', home: 'home', intro: 'intro' };
+  const demoScreens = { day: 'day', event: 'day', shop: 'shop', kitchen: 'kitchen', meal: 'day', final: 'final', mentor: 'mentor', group: 'group', setup: 'setup', home: 'home', intro: 'intro', list: 'list', album: 'album', fund: 'fund' };
+  const fromHash = () => { const h = location.hash.slice(1); return PAGES.includes(h) ? h : null; };
   const ui = {
-    screen: demo && demoScreens[demo] ? demoScreens[demo] : game ? (game.finished ? 'final' : 'day') : 'home',
+    screen: demo && demoScreens[demo] ? demoScreens[demo] : fromHash() || (game ? (game.finished ? 'final' : 'day') : 'home'),
     cart: {},
     cat: N.categories[0].id,
     modal: null,
@@ -56,6 +60,7 @@
     mentorRegion: pref.region,
     mentorSeed: G.randomCode(),
     group: { text: demo === 'group' ? N.results.sample('22000000000', 'ДЕМО-25') : (demo ? '' : String(readJSON(GROUP_KEY) || '')) },
+    plan: { region: pref.region, hero: pref.hero, level: pref.level, ticks: {} },
   };
   function saveGroup() { if (!demo) writeJSON(GROUP_KEY, ui.group.text || null); }
 
@@ -161,6 +166,28 @@
     game.attempt = n;
     save();
   }
+  // Наклейки за неделю: что заработано и что из этого новое для альбома
+  let demoAlbum = null;
+  function albumBook() {
+    if (demo) {
+      if (!demoAlbum) demoAlbum = Object.fromEntries(N.album.earned(demoGame('final')).map((id) => [id, 'демо']));
+      return demoAlbum;
+    }
+    const b = readJSON(ALBUM_KEY);
+    return b && typeof b === 'object' ? b : {};
+  }
+  function awardStickers() {
+    if (!game || !game.finished || game.albumDone) return;
+    const ids = N.album.earned(game);
+    const book = albumBook();
+    game.albumNew = ids.filter((id) => !book[id]);
+    game.albumDone = true;
+    if (demo) return;
+    const today = new Date().toISOString().slice(0, 10);
+    for (const id of ids) if (!book[id]) book[id] = today;
+    writeJSON(ALBUM_KEY, book);
+    save();
+  }
 
   let toastTimer = null;
   function toast(msg) {
@@ -208,14 +235,28 @@
       <p>Независимый проект для конкурса «Вайбкодинг добрых дел» в поддержку программы «Готовим будущее» фонда «Выручаем». Не является официальным продуктом фонда. Игра не собирает персональные данные и работает без интернета.</p>
     </footer>`;
   }
-  const backTo = (to, text = 'Назад') => `<div class="nav-top"><button class="btn ghost small" data-act="go" data-to="${to}">${icon('back')}${text}</button><span class="spacer"></span>`;
   const bigBtn = () => `<button class="btn small" data-act="big" aria-pressed="${pref.big}">Aa ${pref.big ? 'Обычный шрифт' : 'Крупный шрифт'}</button>`;
+
+  // Шапка сайта: логотип и разделы. В самой игре (день, магазин, кухня) её нет — там своя шапка с деньгами и днём.
+  const NAV = [['play', 'Играть'], ['mentor', 'Наставнику'], ['group', 'Итоги группы'], ['list', 'Список покупок'], ['album', 'Наклейки'], ['fund', 'Для фонда']];
+  function siteHead(active) {
+    const playTo = game && !game.finished ? 'day' : 'setup';
+    const links = NAV.map(([id, label]) => `<button class="nav-link${id === 'play' ? ' nav-play' : ''}" data-act="go" data-to="${id === 'play' ? playTo : id}"${id === active ? ' aria-current="page"' : ''}>${label}</button>`).join('');
+    return `<header class="site-head">
+      <button class="brand" data-act="go" data-to="home" aria-label="Неделя на свои — на главную"><span class="brand-mark" aria-hidden="true">7</span><span class="brand-name">Неделя на свои</span></button>
+      <nav class="site-nav" aria-label="Разделы сайта">${links}</nav>
+    </header>`;
+  }
+  const pageTitle = (label, title, lead, tools = '') => `<section class="page-top">
+      <div class="page-top-row"><p class="label">${label}</p>${tools}</div>
+      <h1>${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</section>`;
 
   // ---------- экраны ----------
   function screenHome() {
     const budget = G.budgetFor(pref.region, 'normal');
     const cont = game && !game.finished;
     return `
+      ${siteHead('home')}
       <section class="home">
         <p class="label">Игра-тренажёр · ${N.prices.regions.length - 1} ${G.plural(N.prices.regions.length - 1, ['регион', 'региона', 'регионов'])} · цены Росстата</p>
         <h1>Неделя <span class="nowrap">на свои</span></h1>
@@ -242,6 +283,14 @@
           <li><b>Чек недели</b><span>Разбор по шести показателям и советы на цифрах твоего региона.</span></li>
         </ol>
       </section>
+      <section class="sec">
+        ${sec(0, 'Ещё на сайте')}
+        <div class="links3">
+          <button class="link-card" data-act="go" data-to="list"><b>Список покупок на неделю</b><span>Настоящий список и меню на 7 дней по ценам твоего региона. Можно распечатать.</span>${icon('arrow')}</button>
+          <button class="link-card" data-act="go" data-to="album"><b>Альбом наклеек</b><span>${N.album.LIST.length} наклеек за то, что пригодится в жизни: суп впрок, ноль отходов, резерв.</span>${icon('arrow')}</button>
+          <button class="link-card" data-act="go" data-to="fund"><b>Для фонда</b><span>Польза, внедрение за день, как считаются звёзды и бюджеты.</span>${icon('arrow')}</button>
+        </div>
+      </section>
       ${footer()}`;
   }
 
@@ -267,7 +316,7 @@
         <span class="lvl-text">${esc(l.text)}</span>
       </button>`).join('');
     return `
-      ${backTo('home', 'На главную')}</div>
+      ${siteHead('play')}
       <h1 class="page-h">Новая неделя</h1>
       <section class="sec">${sec(1, 'Кто ты')}<div class="choice-grid">${heroes}</div></section>
       <section class="sec">
@@ -479,6 +528,7 @@
       <span class="track"><i class="${x.rubPer10g > rank[0].rubPer10g * 3 ? 'hi' : ''}" style="width:${(x.rubPer10g / maxR) * 100}%"></i></span><b>${rub(x.rubPer10g)}</b></div>`).join('');
     const level = N.levels.find((l) => l.id === s.level);
     return `
+      ${siteHead('')}
       <section class="final">
         <p class="label">${esc(cap(weekday(G.DAYS)))}, вечер · неделя закончилась</p>
         <h2 style="font-size:2rem;text-transform:uppercase;font-weight:600">Чек твоей недели</h2>
@@ -510,6 +560,7 @@
         <button class="btn" data-act="copycode">${icon('copy')}Скопировать</button>
       </div>
       <p class="hint">Играешь на занятии? Отправь код в чат группы, и наставник увидит итоги всех.</p>
+      ${finalStickers(s, r)}
       <section class="sec">${sec(1, 'Калории по дням', `норма ${nr.kcal}`)}
         <div class="week" role="img" aria-label="Калории по дням">${week}</div>
         <div class="legend"><span>норма есть</span><span class="l-low">меньше 90%</span><span class="l-norm">норма</span></div>
@@ -533,12 +584,8 @@
     const rank = G.proteinRanking(ui.mentorRegion).slice(0, 5);
     const vf = G.vfRanking(ui.mentorRegion).slice(0, 4);
     return `
-      ${backTo(game ? (game.finished ? 'final' : 'day') : 'home')}${bigBtn()}</div>
-      <section style="padding-top:1rem">
-        <p class="label">Для наставника</p>
-        <h1>Занятие на 45 минут</h1>
-        <p class="lead">Подростки сами планируют неделю питания на реальные цены своего региона и видят последствия решений. Без регистрации и персональных данных, на любом телефоне и на проекторе.</p>
-      </section>
+      ${siteHead('mentor')}
+      ${pageTitle('Для наставника', 'Занятие на 45 минут', 'Подростки сами планируют неделю питания на реальные цены своего региона и видят последствия решений. Без регистрации и персональных данных, на любом телефоне и на проекторе.', bigBtn())}
       <section class="sec">${sec(1, 'Чему учит игра')}
         <div class="dirs">${m.directions.map((d) => `<div><b>${esc(d.title)}</b><p>${esc(d.text)}</p></div>`).join('')}</div>
       </section>
@@ -624,12 +671,8 @@
       out = `<div class="empty-note" style="margin-top:0.75rem">Коды не найдены. Код итога — 12 букв и цифр через дефис, например 4КМТ-Р7ВЖ-ДХ9С.${bad ? ` Похожих на код, но с опечаткой: ${bad}.` : ''}</div>`;
     }
     return `
-      ${backTo('mentor')}${bigBtn()}</div>
-      <section style="padding-top:1rem">
-        <p class="label">Для наставника</p>
-        <h1>Итоги группы</h1>
-        <p class="lead">Соберите коды итогов, и сразу видно, что у группы получилось и о чём поговорить на разборе.</p>
-      </section>
+      ${siteHead('group')}
+      ${pageTitle('Для наставника', 'Итоги группы', 'Соберите коды итогов, и сразу видно, что у группы получилось и о чём поговорить на разборе.', bigBtn())}
       <section class="sec">
         <ol class="steps" style="margin-bottom:1rem">
           <li><b>Каждый присылает код</b><span>В конце игры нажмите «Отправить наставнику» и пришлите код в общий чат. Или покажите экран.</span></li>
@@ -645,6 +688,158 @@
         <p class="hint">В кодах нет имён и телефонов, только звёзды, регион и цифры недели. Всё считается на этом устройстве, в интернет ничего не отправляется.</p>
       </section>
       ${out}
+      ${footer()}`;
+  }
+
+  // Наклейки на экране итогов недели
+  function finalStickers(s, r) {
+    const ids = N.album.earned(s, r);
+    const fresh = new Set(s.albumNew || []);
+    const cards = ids.map((id) => {
+      const a = N.album.byId[id];
+      return `<div class="stk-card got">${fresh.has(id) ? '<span class="st amber stk-new">новая</span>' : ''}<span class="stk-big">${N.stickers.html(a.sticker)}</span><b>${esc(a.title)}</b><span>${esc(a.how)}</span></div>`;
+    }).join('');
+    return `<section class="sec">${sec(0, 'Наклейки этой недели', `${ids.length} из ${N.album.LIST.length}`)}
+      ${ids.length ? `<div class="album">${cards}</div>` : '<p class="muted">В этот раз без наклеек. Загляни в альбом: там написано, за что их дают.</p>'}
+      <button class="btn small" style="margin-top:0.75rem" data-act="go" data-to="album">Открыть альбом${icon('arrow')}</button></section>`;
+  }
+
+  function screenAlbum() {
+    const book = albumBook();
+    const got = N.album.LIST.filter((a) => book[a.id]).length;
+    const date = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? ` · ${v.slice(8, 10)}.${v.slice(5, 7)}` : '');
+    const cards = N.album.LIST.map((a) => {
+      const has = !!book[a.id];
+      return `<div class="stk-card ${has ? 'got' : 'locked'}"><span class="stk-big">${N.stickers.html(a.sticker)}</span><b>${esc(a.title)}</b><span>${esc(a.how)}</span>${has ? `<span class="st ok">есть${date(book[a.id])}</span>` : '<span class="st">ещё нет</span>'}</div>`;
+    }).join('');
+    const playTo = game && !game.finished ? 'day' : 'setup';
+    return `
+      ${siteHead('album')}
+      ${pageTitle('Альбом наклеек', `Собрано ${got} из ${N.album.LIST.length}`, 'Наклейки дают за то, что пригодится в самостоятельной жизни: не выбрасывать еду, готовить впрок, держать резерв. Альбом хранится только на этом устройстве.')}
+      <div class="album sec">${cards}</div>
+      <div class="sec cta"><button class="btn primary block" data-act="go" data-to="${playTo}">${playTo === 'day' ? 'Продолжить неделю' : 'Сыграть неделю'}${icon('arrow')}</button></div>
+      ${footer()}`;
+  }
+
+  // Список покупок на неделю: «разумный игрок» без ситуаций и акций, по обычным ценам региона
+  let planCache = { key: '', plan: null };
+  function currentPlan() {
+    const p = ui.plan;
+    const key = `${p.region}|${p.hero}|${p.level}`;
+    if (planCache.key !== key) planCache = { key, plan: N.weekPlan.make(p) };
+    return planCache.plan;
+  }
+  const MEAL_NAMES = { b: 'Завтрак', l: 'Обед', d: 'Ужин' };
+  function screenList() {
+    const p = ui.plan;
+    const plan = currentPlan();
+    const r = plan.report;
+    const heroes = N.heroes.map((h) => `<button class="lvl" data-act="planset" data-k="hero" data-v="${h.id}" aria-pressed="${p.hero === h.id}">
+        <span class="lvl-name">${h.id === 'anya' ? 'Девушка' : 'Парень'}, 18 лет</span><span class="lvl-price">${G.fmtNum(h.kcal)} ккал</span><span class="lvl-text">и ${h.prot} г белка в день</span></button>`).join('');
+    const levels = N.levels.map((l) => `<button class="lvl" data-act="planset" data-k="level" data-v="${l.id}" aria-pressed="${p.level === l.id}">
+        <span class="lvl-name">${esc(l.name)}</span><span class="lvl-price">${rub(G.budgetFor(p.region, l.id))}</span><span class="lvl-text">${esc(l.text)}</span></button>`).join('');
+    const trips = plan.trips.map((t) => `
+      <div class="trip"><div class="trip-h"><b>${esc(cap(weekday(t.day)))}</b><span class="mono">${rub(t.total)}</span></div>
+        <div class="rows">${t.items.map((it) => {
+          const k = `${t.day}:${it.pid}`;
+          return `<label class="rowi tick-row">${pic(P[it.pid])}<span class="body"><span class="name">${esc(P[it.pid].name)}</span><span class="sub mono">${it.q} × ${G.fmtPack(it.pid)} · ${rub(it.price * it.q)}</span></span>
+            <input type="checkbox" class="tick" data-change="tick" data-k="${k}" ${p.ticks[k] ? 'checked' : ''} aria-label="Куплено: ${esc(P[it.pid].name)}"></label>`;
+        }).join('')}</div></div>`).join('');
+    const menu = plan.menu.map((d) => `<div class="menu-day"><b class="menu-wd">${WD[d.day - 1]}</b><div>${d.meals.map((m) => `<div><span class="label">${MEAL_NAMES[m.slot]}</span> ${m.name ? esc(m.name) : '<span class="muted">—</span>'}</div>`).join('')}${d.snacks.length ? `<div><span class="label">Перекус</span> ${esc([...new Set(d.snacks)].join(', '))}</div>` : ''}</div></div>`).join('');
+    const nr = plan.norms;
+    return `
+      ${siteHead('list')}
+      ${pageTitle('Из игры в жизнь', 'Список покупок на неделю', 'Настоящий список продуктов и меню на 7 дней по средним ценам Росстата в твоём регионе. Возьми его в магазин или дай группе как домашнее задание.')}
+      <section class="sec">${sec(1, 'Для кого')}
+        <select class="field" data-change="planRegion" aria-label="Регион">${regionOptions(p.region)}</select>
+        <div class="levels two" style="margin-top:0.6rem">${heroes}</div>
+        <div class="levels" style="margin-top:0.6rem">${levels}</div>
+      </section>
+      <div class="sec tiles" id="plan-results">
+        <div class="tile"><b>${rub(plan.budget)}</b><span>бюджет недели</span></div>
+        <div class="tile"><b>${rub(plan.total)}</b><span>по этому списку</span></div>
+        <div class="tile"><b>${rub(Math.max(0, plan.left))}</b><span>останется в резерве</span></div>
+        <div class="tile"><b>${r.total} / ${r.max}</b><span>звёзд за такую неделю в игре</span></div>
+      </div>
+      <section class="sec">${sec(2, 'Что купить', `${plan.trips.length} ${G.plural(plan.trips.length, ['поход', 'похода', 'походов'])} в магазин`)}
+        <p class="hint" style="margin-top:0">Скоропортящееся покупается не сразу, а ближе к готовке. Отмечай, что уже в корзине.</p>
+        ${trips}
+      </section>
+      <section class="sec">${sec(3, 'Меню на неделю')}<div class="menu">${menu}</div></section>
+      <section class="sec">${sec(4, 'Почему так')}
+        <ol class="tips">
+          <li><span>В среднем ${Math.round(plan.perDay.kcal)} ккал из ${nr.kcal} и ${Math.round(plan.perDay.prot)} г белка из ${nr.prot} в день, овощей и фруктов ${Math.round(plan.perDay.vf)} г из ${nr.vf}.</span></li>
+          <li><span>Супы и вторые блюда готовятся сразу на 2–4 дня: так дешевле и быстрее, чем каждый день с нуля.</span></li>
+          <li><span>Крупа, масло и сахар не заканчиваются за неделю: в шкафу и холодильнике останется запас на ${rub(plan.leftover)}.</span></li>
+          <li><span>Цены средние по региону (${esc(N.prices.period)}). В конкретном магазине они другие, поэтому нужен резерв.</span></li>
+        </ol>
+      </section>
+      <div class="sec share-row">
+        <button class="btn primary" data-act="print" data-what="list">${icon('print')}Распечатать</button>
+        <button class="btn" data-act="plancopy">${icon('copy')}Скопировать список</button>
+      </div>
+      ${footer()}`;
+  }
+
+  function screenFund() {
+    const regions = N.prices.regions.length - 1;
+    const facts = [
+      [regions, `${G.plural(regions, ['регион', 'региона', 'регионов'])} с ценами Росстата`],
+      [N.products.length, 'продуктов в магазине'],
+      [N.recipes.length, 'простых рецепта'],
+      [N.events.length, 'жизненных ситуаций'],
+      ['45 мин', 'готовое занятие'],
+      ['0 ₽', 'сервер и база не нужны'],
+    ];
+    const row = (a, b, c, d) => `<tr><th>${a}</th><td>${b}</td><td>${c}</td><td>${d}</td></tr>`;
+    return `
+      ${siteHead('fund')}
+      ${pageTitle('Для фонда «Выручаем»', 'Тренажёр для «Готовим будущее»', 'Подросток из детского дома проживает первую неделю самостоятельной жизни на настоящих ценах своего региона: закупается, готовит, следит за сроками и решает жизненные ситуации. Наставник получает готовое занятие и измеримый результат.', bigBtn())}
+      <div class="tiles six sec">${facts.map(([n, t]) => `<div class="tile"><b>${n}</b><span>${t}</span></div>`).join('')}</div>
+      <section class="sec">${sec(1, 'Что получает фонд')}
+        <ol class="steps">
+          <li><b>Готовый материал в любом регионе</b><span>Наставник открывает ссылку, и через минуту группа играет на ценах своего региона. Ничего не нужно печатать заранее или устанавливать.</span></li>
+          <li><b>Все четыре направления программы</b><span>Здоровое питание, финансовая грамотность, осознанный быт и старт карьеры (ситуация с подработкой).</span></li>
+          <li><b>Измеримый результат занятия</b><span>Каждый присылает короткий код итога, наставник видит средний результат группы, слабые места и прирост во второй попытке. Распечатку можно приложить к отчёту донорам.</span></li>
+          <li><b>Мост из игры в жизнь</b><span>Список покупок и меню на неделю по ценам региона — готовое домашнее задание: сходить в магазин и сравнить с игрой.</span></li>
+          <li><b>Тот же движок — другим благополучателям</b><span>Например, семьям с продуктовым сертификатом из «Праздника на стол»: меняются герой и бюджет.</span></li>
+        </ol>
+      </section>
+      <section class="sec">${sec(2, 'Как внедрить за один день')}
+        <ol class="steps">
+          <li><b>Разместить</b><span>Это статический сайт: подойдёт сайт фонда, GitHub Pages или страница программы через iframe. Сервер, база и сторонние библиотеки не нужны.</span></li>
+          <li><b>Дать ссылку наставникам</b><span>В разделе «Наставнику» — план занятия на 45 минут, вопросы для разбора, шпаргалка цен и материалы для печати.</span></li>
+          <li><b>Провести занятие</b><span>Вся группа вводит один код недели, поэтому события и акции у всех одинаковые, а итоги честно сравниваются.</span></li>
+          <li><b>Собрать результат</b><span>Ребята присылают коды в чат, наставник открывает «Итоги группы» и печатает отчёт.</span></li>
+          <li><b>Обновлять цены</b><span>Раз в месяц одной командой из открытого файла Росстата. Товары, рецепты и ситуации правятся в обычных текстовых файлах.</span></li>
+        </ol>
+      </section>
+      <section class="sec">${sec(3, 'Как считаются результаты')}
+        <p class="small muted">Бюджет «Обычно» — стоимость разумного набора продуктов на неделю в регионе, «Туго» — 80% от него, «Свободно» — 125%. Нормы: МР 2.3.1.0253-21 Роспотребнадзора для 18–29 лет и 400 г овощей и фруктов в день по рекомендации ВОЗ.</p>
+        <div class="table-wrap"><table class="gtable left">
+          <thead><tr><th>Показатель</th><th>3 звезды</th><th>2 звезды</th><th>1 звезда</th></tr></thead>
+          <tbody>
+            ${row('Бюджет', 'осталось ≥10%', '≥3%', 'не в минусе')}
+            ${row('Сытость', '≥90% нормы', '≥75%', '≥60%')}
+            ${row('Белок', '≥90% нормы', '≥75%', '≥60%')}
+            ${row('Овощи и фрукты', '≥80% от 400 г', '≥50%', '≥25%')}
+            ${row('Без отходов', '≤3% покупок', '≤8%', '≤15%')}
+            ${row('Настроение', '≥70 из 100', '≥50', '≥30')}
+          </tbody></table></div>
+        <p class="hint">Проверка баланса: «разумный игрок» проходит неделю во всех ${regions} регионах на бюджете «Обычно» и везде набирает 16–18 звёзд из 18. Значит, игра честная в любом регионе.</p>
+      </section>
+      <section class="sec">${sec(4, 'Данные и приватность')}
+        <ol class="steps">
+          <li><b>Цены</b><span>${esc(N.prices.source)}, ${esc(N.prices.period)}</span></li>
+          <li><b>Персональные данные</b><span>Игра ничего не отправляет в сеть. Прогресс хранится только в браузере игрока, в коде итога нет имени и телефона.</span></li>
+          <li><b>Без интернета</b><span>После первого открытия работает офлайн и ставится на главный экран телефона.</span></li>
+        </ol>
+      </section>
+      <div class="sec cta" style="max-width:none">
+        <button class="btn primary block" data-act="go" data-to="mentor">Открыть раздел для наставника${icon('arrow')}</button>
+        <button class="btn block" data-act="groupdemo">Пример итогов группы</button>
+        <button class="btn block" data-act="print" data-what="fund">${icon('print')}Одностраничник для фонда (печать или PDF)</button>
+      </div>
       ${footer()}`;
   }
 
@@ -838,6 +1033,29 @@
         <table><tr><th>#</th><th>Имя (впишите)</th><th>Звёзд</th>${G.METRICS.map((m) => `<th>${esc(m.name)}</th>`).join('')}<th>Остаток денег</th><th>Попытка</th></tr>
         ${list.map((r, i) => `<tr><td>${i + 1}</td><td></td><td>${r.total}</td>${G.METRICS.map((m) => `<td>${r.stars[m.id]}</td>`).join('')}<td>${r.moneyPct}%</td><td>${r.attempt}</td></tr>`).join('')}</table>`;
     }
+    if (what === 'list') {
+      const plan = currentPlan();
+      return `<h1>Список покупок на неделю</h1>
+        <p>${esc(regionName(plan.region))} · бюджет ${rub(plan.budget)} · по списку ${rub(plan.total)} · резерв ${rub(Math.max(0, plan.left))}</p>
+        <div class="two"><div>${plan.trips.map((t) => `<h2>${esc(cap(weekday(t.day)))} — ${rub(t.total)}</h2>
+          <table>${t.items.map((it) => `<tr><td>☐ ${esc(P[it.pid].name)}</td><td>${it.q} × ${G.fmtPack(it.pid)}</td><td>${rub(it.price * it.q)}</td></tr>`).join('')}</table>`).join('')}</div>
+        <div><h2>Меню</h2><table>${plan.menu.map((d) => `<tr><th>${WD[d.day - 1].toUpperCase()}</th><td>${d.meals.map((m) => `${MEAL_NAMES[m.slot]}: ${esc(m.name || '—')}`).join('<br>')}</td></tr>`).join('')}</table></div></div>
+        <p class="note">Средние цены Росстата ${esc(N.prices.period)} В магазине могут отличаться. Составлено в игре «Неделя на свои».</p>`;
+    }
+    if (what === 'fund') {
+      const regions = N.prices.regions.length - 1;
+      return `<h1>«Неделя на свои» — тренажёр для программы «Готовим будущее»</h1>
+        <p>Игра для подростков из детских домов: первая неделя самостоятельной жизни на настоящих ценах своего региона. ${regions} регионов, ${N.products.length} продуктов по данным Росстата, ${N.recipes.length} рецепта, ${N.events.length} жизненных ситуаций. Работает с любого телефона, без регистрации, сервера и персональных данных.</p>
+        <h2>Что получает фонд</h2><ul>
+          <li>Готовое занятие на 45 минут для наставников в любом регионе.</li>
+          <li>Все четыре направления программы: питание, финансовая грамотность, быт, старт карьеры.</li>
+          <li>Измеримый результат: «Итоги группы» по кодам ребят — средний результат, слабые места, прирост во второй попытке.</li>
+          <li>Мост в реальную жизнь: список покупок и меню на неделю по ценам региона.</li>
+        </ul>
+        <h2>Как внедрить</h2><ol><li>Разместить статический сайт (сайт фонда, GitHub Pages, iframe).</li><li>Дать ссылку наставникам.</li><li>Провести занятие с одним кодом недели.</li><li>Собрать коды итогов и распечатать отчёт.</li></ol>
+        <p>Играть: https://fle3n.github.io/nedelya-na-svoi/ · Код: https://github.com/Fle3n/nedelya-na-svoi</p>
+        <p class="note">Независимый проект для конкурса «Вайбкодинг добрых дел». Цены: ${esc(N.prices.source)}, ${esc(N.prices.period)}</p>`;
+    }
     if (what === 'cheatsheet') {
       const rank = G.proteinRanking(region);
       const vf = G.vfRanking(region);
@@ -879,9 +1097,17 @@
     const ev = game && !game.finished ? G.todayEvent(game) : null;
     if (ev) ui.modal = { type: 'event', ev };
   }
+  // Ссылка в адресной строке для разделов сайта: …/#fund можно отправить фонду или жюри
+  function syncHash(screen) {
+    if (demo) return;
+    const want = PAGES.includes(screen) ? `#${screen}` : '';
+    if (location.hash === want) return;
+    try { history.replaceState(null, '', location.pathname + location.search + want); } catch (e) { /* без адреса */ }
+  }
   function go(screen) {
     ui.screen = screen;
     ui.modal = null;
+    syncHash(screen);
     if (screen === 'day') openEventIfAny();
     render();
     window.scrollTo(0, 0);
@@ -925,6 +1151,9 @@
     },
     groupsample: () => { ui.group.text = N.results.sample(ui.mentorRegion, ui.mentorSeed); saveGroup(); actions.groupcalc(); },
     groupclear: () => { ui.group.text = ''; saveGroup(); render(); },
+    groupdemo: () => { ui.group.text = N.results.sample(ui.mentorRegion, ui.mentorSeed); go('group'); },
+    planset: (d) => { ui.plan[d.k] = d.v; ui.plan.ticks = {}; render(); },
+    plancopy: () => copyText(N.weekPlan.asText(currentPlan(), regionName(ui.plan.region))),
 
     cat: (d) => { ui.cat = d.cat; render(); },
     qty: (d) => {
@@ -1006,7 +1235,7 @@
       render();
     },
     nextday: () => {
-      if (game.finished) { markAttempt(); go('final'); return; }
+      if (game.finished) { markAttempt(); awardStickers(); go('final'); return; }
       ui.modal = null;
       go('day');
     },
@@ -1022,7 +1251,10 @@
     const k = e.target.dataset && e.target.dataset.change;
     if (k === 'region') { ui.setup.region = e.target.value; render(); }
     if (k === 'mentorRegion') { ui.mentorRegion = e.target.value; render(); }
+    if (k === 'planRegion') { ui.plan.region = e.target.value; ui.plan.ticks = {}; render(); }
+    if (k === 'tick') { ui.plan.ticks[e.target.dataset.k] = e.target.checked; }
   });
+  window.addEventListener('hashchange', () => { const h = fromHash(); if (h && h !== ui.screen) go(h); });
   document.addEventListener('input', (e) => {
     if (e.target.dataset && e.target.dataset.change === 'seed') ui.setup.seed = G.normCode(e.target.value) || G.randomCode();
     if (e.target.dataset && e.target.dataset.change === 'group') { ui.group.text = e.target.value; saveGroup(); }
@@ -1034,8 +1266,8 @@
   // ---------- отрисовка ----------
   let shown = null; // какой экран был на прошлой отрисовке: анимация появления только при смене экрана
   function render() {
-    const screens = { home: screenHome, setup: screenSetup, intro: screenIntro, day: screenDay, shop: screenShop, kitchen: screenKitchen, final: screenFinal, mentor: screenMentor, group: screenGroup };
-    if (!game && !['home', 'setup', 'mentor', 'group'].includes(ui.screen)) ui.screen = 'home';
+    const screens = { home: screenHome, setup: screenSetup, intro: screenIntro, day: screenDay, shop: screenShop, kitchen: screenKitchen, final: screenFinal, mentor: screenMentor, group: screenGroup, list: screenList, album: screenAlbum, fund: screenFund };
+    if (!game && !['home', 'setup', ...PAGES].includes(ui.screen)) ui.screen = 'home';
     $app.classList.toggle('enter', ui.screen !== shown);
     shown = ui.screen;
     $app.innerHTML = screens[ui.screen]();
@@ -1048,6 +1280,7 @@
   }
 
   document.body.classList.toggle('big', pref.big);
+  if (game && game.finished) awardStickers(); // неделя закончилась в прошлый раз, а наклейки ещё не выданы
   if (ui.screen === 'day') openEventIfAny();
   if (demo === 'meal') ui.modal = { type: 'meal', slot: 'l' };
   if (demo === 'shop') { ui.cat = 'meat'; ui.cart = { okorochka: 1, yaica: 1 }; }

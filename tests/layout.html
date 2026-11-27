@@ -49,14 +49,18 @@
     const add = (msg) => { if (!issues.some((x) => x.msg === msg)) issues.push({ step, msg }); };
     if (d.documentElement.scrollWidth > vw + 1) add(`горизонтальная прокрутка: ширина страницы ${d.documentElement.scrollWidth} при экране ${vw}`);
     for (const el of d.querySelectorAll('#app *, #modal-root *')) {
-      if (el.closest('svg, .tabs, .table-wrap')) continue;
+      if (el.closest('svg, .tabs, .table-wrap, .site-nav')) continue; // эти полосы прокручиваются вбок нарочно
       const st = w.getComputedStyle(el);
       if (st.display === 'none' || st.visibility === 'hidden') continue;
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height) continue;
       if (r.right > vw + 1.5 || r.left < -1.5) add(`за краем экрана: ${describe(el)} (${Math.round(r.left)}…${Math.round(r.right)} из ${vw})`);
       if (el.matches('button, .btn') && el.scrollWidth > el.clientWidth + 1) add(`текст вылезает из кнопки: ${describe(el)}`);
-      if (touch && el.matches('button, select, input, textarea') && !el.disabled && (r.height < 35.5 || r.width < 35.5)) add(`мелкая кнопка ${Math.round(r.width)}×${Math.round(r.height)}: ${describe(el)}`);
+      if (touch && el.matches('button, select, input, textarea') && !el.disabled) {
+        // галочка внутри строки-метки нажимается всей строкой — меряем строку
+        const box = el.matches('input') && el.closest('label') ? el.closest('label').getBoundingClientRect() : r;
+        if (box.height < 35.5 || box.width < 35.5) add(`мелкая кнопка ${Math.round(box.width)}×${Math.round(box.height)}: ${describe(el)}`);
+      }
     }
     // текст не должен заезжать под стикер, ценник или наклейку срока
     const PAIRS = [['.promo', '.nm', '.pic'], ['.product', '.info', '.ptag'], ['.meal', '.name', '.pic'], ['.rowi', '.body', '.st'], ['.rowi', '.body', '.btn']];
@@ -126,7 +130,13 @@
     });
     await doStep('наставник', () => A().go({ to: 'mentor' }));
     await doStep('итоги группы', () => { A().go({ to: 'group' }); A().groupsample(); });
-    await doStep('крупный шрифт: итоги группы', () => A().big());
+    await doStep('список покупок', () => A().go({ to: 'list' }));
+    await doStep('список покупок: парень, туго', () => { A().planset({ k: 'hero', v: 'misha' }); A().planset({ k: 'level', v: 'hard' }); });
+    await doStep('альбом наклеек', () => A().go({ to: 'album' }));
+    await doStep('для фонда', () => A().go({ to: 'fund' }));
+    await doStep('крупный шрифт: для фонда', () => A().big());
+    await doStep('крупный шрифт: список покупок', () => A().go({ to: 'list' }));
+    await doStep('крупный шрифт: итоги группы', () => A().go({ to: 'group' }));
     await doStep('крупный шрифт: итоги недели', () => A().go({ to: 'final' }));
     await doStep('крупный шрифт: главная', () => A().go({ to: 'home' }));
     A().big();

@@ -362,6 +362,65 @@
     eq(R.summarize([]), null);
   });
 
+  // ---------- список покупок на неделю ----------
+  test('список покупок: во всех регионах укладывается в бюджет «Обычно» и кормит всю неделю', () => {
+    for (const reg of N.prices.regions) {
+      for (const hero of ['anya', 'misha']) {
+        const plan = N.weekPlan.make({ region: reg.code, hero, level: 'normal' });
+        ok(plan.total <= plan.budget + 0.01, `${reg.name}/${hero}: список ${Math.round(plan.total)} > бюджета ${plan.budget}`);
+        eq(plan.menu.length, G.DAYS, `${reg.name}: дней в меню`);
+        for (const d of plan.menu) ok(d.meals.filter((m) => m.name).length >= 2, `${reg.name}: в ${d.day}-й день меньше двух приёмов пищи`);
+        ok(plan.report.total >= 15, `${reg.name}/${hero}: по списку всего ${plan.report.total} звёзд`);
+        ok(plan.perDay.kcal >= plan.norms.kcal * 0.85, `${reg.name}/${hero}: по списку недоедает — ${Math.round(plan.perDay.kcal)} ккал`);
+      }
+    }
+  });
+  test('список покупок: сумма по походам в магазин сходится, акций и ситуаций нет', () => {
+    const plan = N.weekPlan.make({ region: RF, hero: 'misha', level: 'hard' });
+    const byTrips = plan.trips.reduce((s, t) => s + t.items.reduce((x, it) => x + it.price * it.q, 0), 0);
+    near(byTrips, plan.total, 0.01, 'сумма по походам');
+    near(plan.trips.reduce((s, t) => s + t.total, 0), plan.total, 0.01, 'итоги походов');
+    const units = G.unitPrices(RF);
+    for (const it of plan.products) {
+      const p = G.P[it.pid];
+      const base = Math.round(p.basis === 'pack' ? units[it.pid] : (units[it.pid] * p.pack) / 1000);
+      near(it.price, base, 1, `${p.name}: цена без скидки`);
+    }
+    ok(N.weekPlan.asText(plan, 'Россия').includes('☐ '), 'текстовый список');
+  });
+
+  // ---------- альбом наклеек ----------
+  test('наклейки: у каждой свой рисунок, id не повторяются', () => {
+    const ids = new Set();
+    for (const a of N.album.LIST) {
+      ok(!ids.has(a.id), `повтор ${a.id}`); ids.add(a.id);
+      ok(N.stickers.keys.includes(a.sticker), `${a.id}: нет стикера ${a.sticker}`);
+      ok(a.title && a.how, `${a.id}: нет текста`);
+    }
+  });
+  test('наклейки: «разумный игрок» варит суп впрок и получает за это наклейки', () => {
+    const g = game();
+    N.autoplay.playWeek(g, G.DAYS);
+    const got = N.album.earned(g);
+    for (const id of ['soup', 'batch']) ok(got.includes(id), `нет наклейки ${id}: ${got.join(', ')}`);
+    ok(!got.includes('retry'), 'первая попытка — без «Работы над ошибками»');
+    g.attempt = 2;
+    ok(N.album.earned(g).includes('retry'), 'повторная попытка');
+  });
+  test('наклейки: голодная неделя не даёт наклеек за звёзды', () => {
+    const g = game();
+    for (let d = 1; d <= G.DAYS; d++) G.endDay(g);
+    const got = N.album.earned(g);
+    for (const id of ['master', 'happy', 'protein', 'veg', 'soup', 'batch']) ok(!got.includes(id), `голодная неделя дала ${id}`);
+    ok(got.includes('no_waste'), 'ничего не купил — ничего не выбросил');
+  });
+  test('наклейки: заморозка считается', () => {
+    const g = game();
+    G.buy(g, { okorochka: 1 });
+    ok(G.freeze(g, 'okorochka'), 'заморозилось');
+    eq(g.froze, 1, 'счётчик заморозки');
+  });
+
   // ---------- вывод ----------
   const failed = results.filter((r) => !r.ok);
   window.__testResults = { total: results.length, failed: failed.length, failures: failed };

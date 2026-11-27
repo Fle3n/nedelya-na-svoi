@@ -1,5 +1,5 @@
 // Офлайн-режим: после первого открытия игра работает без интернета (детский дом, электричка, плохая связь).
-const CACHE = 'nedelya-v4';
+const CACHE = 'nedelya-v5';
 const FILES = [
   './',
   'index.html',
@@ -16,6 +16,8 @@ const FILES = [
   'js/engine.js',
   'js/results.js',
   'js/autoplay.js',
+  'js/weekplan.js',
+  'js/album.js',
   'js/app.js',
   'manifest.webmanifest',
   'icons/icon.svg',

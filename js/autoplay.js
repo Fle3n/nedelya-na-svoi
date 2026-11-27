@@ -27,7 +27,8 @@ window.NNS = window.NNS || {};
     return g.dishes.filter((d) => d.uid !== except).sort((a, b) => a.exp - b.exp)[0];
   }
 
-  function playDay(g) {
+  // opts.full — доедать до нормы (для списка покупок на неделю): больше перекусов хлебом, кефиром и бананами
+  function playDay(g, opts) {
     const ev = G.todayEvent(g);
     if (ev) {
       // выбирает самый дешёвый доступный вариант
@@ -63,7 +64,8 @@ window.NNS = window.NNS || {};
     }
     // добрать калории хлебом, яблоками, кефиром
     const nr = G.norms(g);
-    for (const pid of ['yabloki', 'hleb', 'kefir', 'hleb']) {
+    const TOPUP = opts && opts.full ? ['yabloki', 'hleb', 'kefir', 'banany', 'hleb', 'moloko', 'hleb', 'baton', 'hleb'] : ['yabloki', 'hleb', 'kefir', 'hleb'];
+    for (const pid of TOPUP) {
       if (G.dayTotals(g).kcal >= nr.kcal * 0.95) break;
       if (G.stock(g, pid) < G.P[pid].snack && G.packPrice(g, pid).price <= g.money * 0.3) G.buy(g, { [pid]: 1 });
       if (G.stock(g, pid) >= 1) G.eat(g, 's', { type: 'product', pid });
@@ -73,11 +75,11 @@ window.NNS = window.NNS || {};
     return G.endDay(g);
   }
 
-  function playWeek(g, days) {
+  function playWeek(g, days, opts) {
     const until = days || G.DAYS;
     while (!g.finished && g.day <= until) {
       const before = g.day;
-      playDay(g);
+      playDay(g, opts);
       if (g.day === before && !g.finished) break;
     }
     return g;

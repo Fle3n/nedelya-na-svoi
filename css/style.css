@@ -163,6 +163,92 @@ button.rowi[disabled] { opacity: 0.45; cursor: not-allowed; }
 .stars .i { width: 1em; height: 1em; }
 .stars .off { color: var(--rule); }
 
+/* ---------- Шапка сайта ---------- */
+.site-head {
+  display: flex; align-items: center; gap: 0.5rem 1.25rem; flex-wrap: wrap;
+  margin: 0 -1rem; padding: 0.6rem 1rem 0; border-bottom: 1.5px solid var(--ink);
+}
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem; padding: 0.2rem 0; background: none; border: 0; cursor: pointer; color: var(--ink); }
+.brand-mark {
+  display: grid; place-items: center; width: 1.9rem; height: 1.7rem; border: 1.5px solid var(--tag-ink); border-radius: 3px;
+  background: var(--tag); color: var(--tag-ink); font: 700 1.15rem/1 var(--f-display); transform: rotate(-6deg);
+}
+.brand-name { font: 600 1.15rem/1 var(--f-display); text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; }
+.site-nav {
+  display: flex; gap: 0.15rem; overflow-x: auto; scrollbar-width: none; flex: 1 1 100%; margin: 0 -1rem; padding: 0 1rem;
+  -webkit-mask: linear-gradient(90deg, #000 85%, transparent); mask: linear-gradient(90deg, #000 85%, transparent);
+}
+.site-nav::-webkit-scrollbar { display: none; }
+.nav-link {
+  flex: none; padding: 0.7rem 0.6rem 0.65rem; margin-bottom: -1.5px; background: none; border: 0; border-bottom: 3px solid transparent;
+  font: 600 0.92rem var(--f-body); color: var(--muted); cursor: pointer; white-space: nowrap;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.nav-link.nav-play { color: var(--ink); }
+.nav-link.nav-play::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.4rem; background: var(--tag); box-shadow: 0 0 0 1.5px var(--ink); transform: rotate(45deg) translateY(-0.1rem); }
+/* С 760 px все разделы помещаются в строку целиком — без прокрутки и затухания */
+@media (min-width: 760px) {
+  .site-nav { -webkit-mask: none; mask: none; }
+}
+.page-top { padding-top: 1.5rem; }
+.page-top-row { display: flex; align-items: center; gap: 0.75rem; justify-content: space-between; margin-bottom: 0.35rem; }
+.page-top-row .label { margin: 0; }
+
+/* ---------- Ещё на сайте ---------- */
+.links3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.6rem; }
+.link-card {
+  position: relative; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.9rem 2.6rem 0.9rem 0.9rem; text-align: left; cursor: pointer;
+  background: var(--sheet); border: 1.5px solid var(--ink); border-radius: var(--r);
+}
+.link-card b { font: 500 1.1rem/1.15 var(--f-display); text-transform: uppercase; }
+.link-card span { font-size: 0.86rem; color: var(--muted); }
+.link-card .i { position: absolute; right: 0.8rem; top: 0.95rem; }
+.link-card:hover { background: var(--tag); color: var(--tag-ink); }
+.link-card:hover span { color: var(--tag-ink); }
+
+/* ---------- Альбом наклеек ---------- */
+.album { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.6rem; }
+.stk-card {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 1rem 0.6rem 0.8rem; text-align: center;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r);
+}
+.stk-card b { font: 500 1rem/1.15 var(--f-display); text-transform: uppercase; margin-top: 0.35rem; }
+.stk-card > span:not(.stk-big):not(.st) { font-size: 0.8rem; color: var(--muted); line-height: 1.3; }
+.stk-card .st { margin-top: auto; }
+.stk-card .stk-new { position: absolute; top: 0.45rem; right: 0.45rem; margin: 0; }
+.stk-big { display: grid; place-items: center; width: 4.2rem; height: 4.2rem; }
+.stk-big .stk { width: 100%; height: 100%; }
+.stk-card.locked .stk-big { filter: grayscale(1) opacity(0.35); }
+.stk-card.locked b { color: var(--muted); }
+.stk-card.got { border-color: var(--ink); }
+
+/* ---------- Список покупок ---------- */
+.levels.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 559px) { .levels.two { grid-template-columns: 1fr; } }
+.trip { margin-top: 1rem; }
+.trip-h { display: flex; justify-content: space-between; align-items: baseline; padding: 0.3rem 0; font: 500 1.05rem var(--f-display); text-transform: uppercase; }
+.trip-h .mono { font-size: 0.9rem; }
+.tick-row { cursor: pointer; }
+.tick { flex: none; width: 1.6rem; height: 1.6rem; margin: 0 0.15rem 0 0; accent-color: var(--ink); cursor: pointer; }
+.tick-row:has(.tick:checked) .body { opacity: 0.45; text-decoration: line-through; }
+.menu { border-top: 1px solid var(--rule); }
+.menu-day { display: grid; grid-template-columns: 2.6rem 1fr; gap: 0.6rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule); font-size: 0.92rem; }
+.menu-day .label { display: inline-block; min-width: 5.5rem; }
+.menu-wd { font: 600 1.2rem/1.2 var(--f-display); text-transform: uppercase; }
+.tiles.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tiles.six .tile:nth-child(2n) { border-right: 0; }
+.tiles.six .tile:nth-last-child(-n + 2) { border-bottom: 0; }
+@media (min-width: 700px) {
+  .tiles.six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tiles.six .tile { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .tiles.six .tile:nth-child(3n) { border-right: 0; }
+  .tiles.six .tile:nth-child(2n):not(:nth-child(3n)) { border-right: 1px solid var(--rule); }
+  .tiles.six .tile:nth-last-child(-n + 3) { border-bottom: 0; }
+}
+.gtable.left th, .gtable.left td { text-align: left; white-space: normal; }
+.gtable.left tbody th { font: 600 0.84rem var(--f-body); color: var(--ink); text-transform: none; letter-spacing: 0; border-bottom: 1px solid var(--rule); }
+
 /* ---------- Главная ---------- */
 .home { padding-top: 1.75rem; }
 .home h1 { font-size: clamp(3.1rem, 16vw, 5.4rem); line-height: 0.9; margin: 0.6rem 0 1rem; }
@@ -188,6 +274,7 @@ button.rowi[disabled] { opacity: 0.45; cursor: not-allowed; }
 .steps li::before { counter-increment: s; content: counter(s, decimal-leading-zero); font: 500 0.8rem/1.6 var(--f-mono); color: var(--muted); grid-row: span 2; }
 .steps li b { font-weight: 600; }
 .steps li span { color: var(--muted); font-size: 0.92rem; }
+.steps li > b, .steps li > span { min-width: 0; overflow-wrap: anywhere; hyphens: auto; }
 .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1.5px solid var(--ink); font-size: 0.8rem; color: var(--muted); }
 
 /* ---------- Новая неделя ---------- */

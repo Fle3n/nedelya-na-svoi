@@ -221,6 +221,7 @@ window.NNS = window.NNS || {};
         changed = true;
       }
     }
+    if (changed) state.froze = (state.froze || 0) + 1; // для наклейки «Морозилка — друг»
     return changed;
   }
 
@@ -279,6 +280,7 @@ window.NNS = window.NNS || {};
     };
     state.dishes.push(dish);
     state.cooked += 1;
+    if (n >= 3) state.batch3 = (state.batch3 || 0) + 1; // для наклейки «Готовлю впрок»
     return { ok: true, dish };
   }
 
